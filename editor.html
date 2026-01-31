@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProjectWhy CMS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0d1117;
+            --bg-panel: #161b22;
+            --bg-hover: #21262d;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-hover: #79b8ff;
+            --success: #3fb950;
+            --warning: #d29922;
+            --danger: #f85149;
+            --editable-outline: #58a6ff;
+            --image-outline: #a371f7;
+            --link-outline: #f0883e;
+            --toggleable-outline: #39d5d5;
+            --repeatable-outline: #3fb950;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header / Toolbar */
+        .toolbar {
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .toolbar h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text);
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar h1::before {
+            content: '◈';
+            color: var(--accent);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-hover);
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background: var(--border);
+            border-color: var(--text-muted);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border-color: var(--success);
+            color: #000;
+        }
+
+        .btn-success:hover {
+            background: #46c35a;
+            border-color: #46c35a;
+        }
+
+        .file-name {
+            color: var(--text-muted);
+            font-size: 13px;
+            padding: 8px 12px;
+            background: var(--bg-dark);
+            border-radius: 4px;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .unsaved-indicator {
+            color: var(--warning);
+            font-size: 12px;
+            margin-left: -8px;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Preview Area */
+        .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-dark);
+        }
+
+        .preview-wrapper {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        #preview-frame {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+            border: none;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+        }
+
+        /* Empty State */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            gap: 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            opacity: 0.3;
+        }
+
+        .empty-state h2 {
+            font-size: 20px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            max-width: 400px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 500px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-header h2 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .modal-close:hover {
+            color: var(--text);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-dark);
+            color: var(--text);
+            font-size: 13px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border);
+            padding: 8px 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 1001;
+        }
+
+        .toast {
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--danger);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="toolbar">
+        <h1>ProjectWhy CMS</h1>
+        <button class="btn" id="btn-open">
+            <span>📂</span> Open HTML
+        </button>
+        <span class="file-name" id="file-name" style="display: none;"></span>
+        <span class="unsaved-indicator" id="unsaved-indicator" style="display: none;">● Unsaved</span>
+        <button class="btn" id="btn-save" disabled>
+            <span>💾</span> Save
+        </button>
+        <button class="btn btn-primary" id="btn-settings">
+            <span>⚙️</span> Firebase Settings
+        </button>
+        <button class="btn btn-success" id="btn-deploy" disabled>
+            <span>🚀</span> Deploy
+        </button>
+    </header>
+
+    <main class="main">
+        <div class="preview-container">
+            <div class="empty-state" id="empty-state">
+                <div class="empty-state-icon">📄</div>
+                <h2>No file open</h2>
+                <p>Open an HTML file to start editing. The file should contain <code>data-editable</code>, <code>data-editable-image</code>, <code>data-editable-link</code>, <code>data-toggleable</code>, or <code>data-repeatable</code> attributes to mark editable regions.</p>
+                <button class="btn btn-primary" id="btn-open-empty">
+                    <span>📂</span> Open HTML File
+                </button>
+            </div>
+            <div class="preview-wrapper" id="preview-wrapper" style="display: none;">
+                <iframe id="preview-frame" sandbox="allow-same-origin allow-scripts"></iframe>
+            </div>
+        </div>
+    </main>
+
+    <footer class="status-bar">
+        <div class="status-item">
+            <div class="status-dot" id="firebase-status"></div>
+            <span id="firebase-status-text">Firebase: Not configured</span>
+        </div>
+        <div class="status-item" style="margin-left: auto;">
+            Chrome/Edge recommended for full functionality
+        </div>
+    </footer>
+
+    <!-- Link Edit Modal -->
+    <div class="modal-overlay" id="link-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit Link</h2>
+                <button class="modal-close" id="link-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Link Text</label>
+                    <input type="text" id="link-text" placeholder="Click here">
+                </div>
+                <div class="form-group">
+                    <label>URL</label>
+                    <input type="text" id="link-url" placeholder="https://example.com">
+                    <small>Use # for placeholder links, or enter a full URL</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="link-cancel">Cancel</button>
+                <button class="btn btn-primary" id="link-save">Save Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Settings Modal -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Firebase Configuration</h2>
+                <button class="modal-close" id="settings-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="firebase-apiKey" placeholder="AIzaSy...">
+                </div>
+                <div class="form-group">
+                    <label>Auth Domain</label>
+                    <input type="text" id="firebase-authDomain" placeholder="your-project.firebaseapp.com">
+                </div>
+                <div class="form-group">
+                    <label>Project ID</label>
+                    <input type="text" id="firebase-projectId" placeholder="your-project-id">
+                    <small>Find these values in Firebase Console → Project Settings → General</small>
+                </div>
+                <div class="form-group">
+                    <label>Site ID (optional)</label>
+                    <input type="text" id="firebase-siteId" placeholder="Leave empty to use project ID">
+                    <small>Only needed if you have multiple hosting sites</small>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button class="btn" id="btn-firebase-signin" style="width: 100%; justify-content: center;">
+                        <span>🔐</span> Sign in with Google
+                    </button>
+                    <p id="firebase-user" style="margin-top: 12px; font-size: 13px; color: var(--text-muted); text-align: center;"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="settings-cancel">Cancel</button>
+                <button class="btn btn-primary" id="settings-save">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Hidden file input for images -->
+    <input type="file" id="image-input" accept="image/*" style="display: none;">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+    <script>
+        // ============================================
+        // State Management
+        // ============================================
+        const state = {
+            fileHandle: null,
+            originalContent: '',
+            hasUnsavedChanges: false,
+            firebaseConfig: null,
+            firebaseUser: null,
+            firebaseApp: null,
+        };
+
+        // ============================================
+        // DOM Elements
+        // ============================================
+        const elements = {
+            btnOpen: document.getElementById('btn-open'),
+            btnOpenEmpty: document.getElementById('btn-open-empty'),
+            btnSave: document.getElementById('btn-save'),
+            btnSettings: document.getElementById('btn-settings'),
+            btnDeploy: document.getElementById('btn-deploy'),
+            fileName: document.getElementById('file-name'),
+            unsavedIndicator: document.getElementById('unsaved-indicator'),
+            emptyState: document.getElementById('empty-state'),
+            previewWrapper: document.getElementById('preview-wrapper'),
+            previewFrame: document.getElementById('preview-frame'),
+            settingsModal: document.getElementById('settings-modal'),
+            settingsClose: document.getElementById('settings-close'),
+            settingsCancel: document.getElementById('settings-cancel'),
+            settingsSave: document.getElementById('settings-save'),
+            btnFirebaseSignin: document.getElementById('btn-firebase-signin'),
+            firebaseUser: document.getElementById('firebase-user'),
+            firebaseStatus: document.getElementById('firebase-status'),
+            firebaseStatusText: document.getElementById('firebase-status-text'),
+            toastContainer: document.getElementById('toast-container'),
+            imageInput: document.getElementById('image-input'),
+            linkModal: document.getElementById('link-modal'),
+            linkClose: document.getElementById('link-close'),
+            linkCancel: document.getElementById('link-cancel'),
+            linkSave: document.getElementById('link-save'),
+            linkText: document.getElementById('link-text'),
+            linkUrl: document.getElementById('link-url'),
+        };
+
+        // ============================================
+        // Toast Notifications
+        // ============================================
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+                <span>${message}</span>
+            `;
+            elements.toastContainer.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // ============================================
+        // File System Operations
+        // ============================================
+        async function openFile() {
+            try {
+                const [handle] = await window.showOpenFilePicker({
+                    types: [{
+                        description: 'HTML Files',
+                        accept: { 'text/html': ['.html', '.htm'] }
+                    }]
+                });
+                state.fileHandle = handle;
+                const file = await handle.getFile();
+                const content = await file.text();
+                state.originalContent = content;
+                state.hasUnsavedChanges = false;
+                
+                elements.fileName.textContent = file.name;
+                elements.fileName.style.display = 'block';
+                elements.unsavedIndicator.style.display = 'none';
+                elements.btnSave.disabled = false;
+                elements.emptyState.style.display = 'none';
+                elements.previewWrapper.style.display = 'block';
+                
+                renderPreview(content);
+                updateDeployButton();
+                showToast(`Opened ${file.name}`, 'success');
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    showToast('Failed to open file: ' + err.message, 'error');
+                }
+            }
+        }
+
+        async function saveFile() {
+            if (!state.fileHandle) return;
+            
+            try {
+                const content = getEditedContent();
+                const writable = await state.fileHandle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                
+                state.originalContent = content;
+                state.hasUnsavedChanges = false;
+                elements.unsavedIndicator.style.display = 'none';
+                showToast('File saved successfully', 'success');
+            } catch (err) {
+                showToast('Failed to save file: ' + err.message, 'error');
+            }
+        }
+
+        function markUnsaved() {
+            if (!state.hasUnsavedChanges) {
+                state.hasUnsavedChanges = true;
+                elements.unsavedIndicator.style.display = 'inline';
+            }
+        }
+
+        function getEditedContent() {
+            const doc = elements.previewFrame.contentDocument;
+            if (!doc) return state.originalContent;
+            
+            // Clone the document to remove editor-specific elements
+            const clone = doc.cloneNode(true);
+            
+            // Remove injected editor styles and scripts
+            const editorStyle = clone.getElementById('cms-editor-styles');
+            if (editorStyle) editorStyle.remove();
+            
+            const editorScript = clone.getElementById('cms-editor-script');
+            if (editorScript) editorScript.remove();
+            
+            // Remove any floating toolbars
+            clone.querySelectorAll('.cms-section-toolbar').forEach(el => el.remove());
+            clone.querySelectorAll('.cms-toggle-toolbar').forEach(el => el.remove());
+            
+            // Handle toggleable elements - add display:none for hidden ones
+            clone.querySelectorAll('[data-toggleable]').forEach(el => {
+                if (el.getAttribute('data-cms-hidden') === 'true') {
+                    el.style.display = 'none';
+                }
+                el.removeAttribute('data-cms-hidden');
+            });
+            
+            // Remove contenteditable attributes that we added
+            clone.querySelectorAll('[contenteditable]').forEach(el => {
+                el.removeAttribute('contenteditable');
+            });
+            
+            // Get the HTML with doctype
+            const doctype = doc.doctype 
+                ? `<!DOCTYPE ${doc.doctype.name}${doc.doctype.publicId ? ` PUBLIC "${doc.doctype.publicId}"` : ''}${doc.doctype.systemId ? ` "${doc.doctype.systemId}"` : ''}>\n`
+                : '<!DOCTYPE html>\n';
+            
+            return doctype + clone.documentElement.outerHTML;
+        }
+
+        // ============================================
+        // Preview Rendering
+        // ============================================
+        function renderPreview(content) {
+            const frame = elements.previewFrame;
+            const doc = frame.contentDocument;
+            
+            doc.open();
+            doc.write(content);
+            doc.close();
+            
+            // Inject editor styles and functionality
+            injectEditorStyles(doc);
+            setupEditableElements(doc);
+            setupToggleableElements(doc);
+            setupRepeatableSections(doc);
+        }
+
+        function injectEditorStyles(doc) {
+            const style = doc.createElement('style');
+            style.id = 'cms-editor-styles';
+            style.textContent = `
+                [data-editable] {
+                    outline: 2px dashed transparent;
+                    outline-offset: 2px;
+                    transition: outline-color 0.15s ease;
+                    cursor: text;
+                }
+                [data-editable]:hover {
+                    outline-color: #58a6ff;
+                }
+                [data-editable]:focus {
+                    outline-color: #58a6ff;
+                    outline-style: solid;
+                }
+                
+                [data-editable-image] {
+                    outline: 2px dashed transparent;
+                    outline-offset: 2px;
+                    transition: outline-color 0.15s ease;
+                    cursor: pointer;
+                }
+                [data-editable-image]:hover {
+                    outline-color: #a371f7;
+                }
+                
+                [data-editable-link] {
+                    outline: 2px dashed transparent;
+                    outline-offset: 2px;
+                    transition: outline-color 0.15s ease;
+                    cursor: pointer;
+                }
+                [data-editable-link]:hover {
+                    outline-color: #f0883e;
+                }
+                
+                [data-toggleable] {
+                    position: relative;
+                    outline: 2px dashed transparent;
+                    outline-offset: 4px;
+                    transition: outline-color 0.15s ease, opacity 0.2s ease;
+                }
+                [data-toggleable]:hover {
+                    outline-color: #39d5d5;
+                }
+                [data-toggleable][data-cms-hidden="true"] {
+                    opacity: 0.35;
+                }
+                
+                .cms-toggle-toolbar {
+                    position: absolute;
+                    top: 4px;
+                    right: 4px;
+                    display: none;
+                    gap: 4px;
+                    z-index: 10000;
+                    background: #161b22;
+                    padding: 4px;
+                    border-radius: 6px;
+                    border: 1px solid #30363d;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                }
+                [data-toggleable]:hover .cms-toggle-toolbar {
+                    display: flex;
+                }
+                
+                .cms-toggle-btn {
+                    padding: 4px 10px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    background: #39d5d5;
+                    color: #000;
+                    font-weight: 500;
+                }
+                .cms-toggle-btn:hover {
+                    background: #5fe3e3;
+                }
+                .cms-toggle-btn.hidden {
+                    background: #6e7681;
+                    color: #fff;
+                }
+                .cms-toggle-btn.hidden:hover {
+                    background: #8b949e;
+                }
+                
+                [data-repeatable] > * {
+                    position: relative;
+                    outline: 2px dashed transparent;
+                    outline-offset: 4px;
+                    transition: outline-color 0.15s ease;
+                }
+                [data-repeatable] > *:hover {
+                    outline-color: #3fb950;
+                }
+                
+                .cms-section-toolbar {
+                    position: absolute;
+                    top: -32px;
+                    right: 0;
+                    display: none;
+                    gap: 4px;
+                    z-index: 10000;
+                    background: #161b22;
+                    padding: 4px;
+                    border-radius: 6px;
+                    border: 1px solid #30363d;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                }
+                [data-repeatable] > *:hover .cms-section-toolbar {
+                    display: flex;
+                }
+                
+                .cms-section-btn {
+                    padding: 4px 8px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                }
+                .cms-section-btn.duplicate {
+                    background: #238636;
+                    color: white;
+                }
+                .cms-section-btn.duplicate:hover {
+                    background: #2ea043;
+                }
+                .cms-section-btn.delete {
+                    background: #da3633;
+                    color: white;
+                }
+                .cms-section-btn.delete:hover {
+                    background: #f85149;
+                }
+            `;
+            doc.head.appendChild(style);
+        }
+
+        function setupEditableElements(doc) {
+            // Setup text editing
+            doc.querySelectorAll('[data-editable]').forEach(el => {
+                el.setAttribute('contenteditable', 'true');
+                el.addEventListener('input', () => markUnsaved());
+                el.addEventListener('blur', () => {
+                    // Remove empty contenteditable styling
+                });
+            });
+            
+            // Setup image replacement
+            doc.querySelectorAll('[data-editable-image]').forEach(img => {
+                img.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    state.currentImageElement = img;
+                    elements.imageInput.click();
+                });
+            });
+            
+            // Setup link editing
+            doc.querySelectorAll('[data-editable-link]').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    state.currentLinkElement = link;
+                    elements.linkText.value = link.textContent || '';
+                    elements.linkUrl.value = link.getAttribute('href') || '#';
+                    elements.linkModal.classList.add('active');
+                    elements.linkText.focus();
+                });
+            });
+        }
+
+        function setupToggleableElements(doc) {
+            doc.querySelectorAll('[data-toggleable]').forEach(el => {
+                // Make sure the element has position relative for toolbar positioning
+                const computedStyle = doc.defaultView.getComputedStyle(el);
+                if (computedStyle.position === 'static') {
+                    el.style.position = 'relative';
+                }
+                
+                // Check if element was previously hidden (has display:none)
+                const isHidden = el.style.display === 'none';
+                if (isHidden) {
+                    el.setAttribute('data-cms-hidden', 'true');
+                    el.style.display = ''; // Remove inline display:none so we can show it in editor
+                }
+                
+                // Add toggle toolbar
+                const toolbar = doc.createElement('div');
+                toolbar.className = 'cms-toggle-toolbar';
+                updateToggleButton(toolbar, isHidden);
+                el.appendChild(toolbar);
+                
+                // Setup toggle button
+                toolbar.querySelector('.cms-toggle-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const currentlyHidden = el.getAttribute('data-cms-hidden') === 'true';
+                    const newHidden = !currentlyHidden;
+                    
+                    if (newHidden) {
+                        el.setAttribute('data-cms-hidden', 'true');
+                    } else {
+                        el.removeAttribute('data-cms-hidden');
+                    }
+                    
+                    updateToggleButton(toolbar, newHidden);
+                    markUnsaved();
+                    showToast(newHidden ? 'Element hidden' : 'Element visible', 'success');
+                });
+            });
+        }
+        
+        function updateToggleButton(toolbar, isHidden) {
+            toolbar.innerHTML = isHidden
+                ? `<button class="cms-toggle-btn hidden" title="Show this element">👁️‍🗨️ Show</button>`
+                : `<button class="cms-toggle-btn" title="Hide this element">👁️ Visible</button>`;
+        }
+
+        function setupRepeatableSections(doc) {
+            doc.querySelectorAll('[data-repeatable]').forEach(container => {
+                Array.from(container.children).forEach(child => {
+                    // Make sure the child has position relative for toolbar positioning
+                    const computedStyle = doc.defaultView.getComputedStyle(child);
+                    if (computedStyle.position === 'static') {
+                        child.style.position = 'relative';
+                    }
+                    
+                    // Add toolbar
+                    const toolbar = doc.createElement('div');
+                    toolbar.className = 'cms-section-toolbar';
+                    toolbar.innerHTML = `
+                        <button class="cms-section-btn duplicate" title="Duplicate">➕ Duplicate</button>
+                        <button class="cms-section-btn delete" title="Delete">🗑️ Delete</button>
+                    `;
+                    child.appendChild(toolbar);
+                    
+                    // Setup duplicate button
+                    toolbar.querySelector('.duplicate').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const clone = child.cloneNode(true);
+                        // Re-setup the cloned element
+                        child.parentNode.insertBefore(clone, child.nextSibling);
+                        setupEditableElements(doc);
+                        setupClonedSectionEvents(clone, doc);
+                        markUnsaved();
+                        showToast('Section duplicated', 'success');
+                    });
+                    
+                    // Setup delete button
+                    toolbar.querySelector('.delete').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (container.children.length > 1) {
+                            child.remove();
+                            markUnsaved();
+                            showToast('Section deleted', 'success');
+                        } else {
+                            showToast('Cannot delete the last item', 'error');
+                        }
+                    });
+                });
+            });
+        }
+
+        function setupClonedSectionEvents(element, doc) {
+            const toolbar = element.querySelector('.cms-section-toolbar');
+            if (!toolbar) return;
+            
+            const container = element.parentNode;
+            
+            toolbar.querySelector('.duplicate').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const clone = element.cloneNode(true);
+                element.parentNode.insertBefore(clone, element.nextSibling);
+                setupEditableElements(doc);
+                setupClonedSectionEvents(clone, doc);
+                markUnsaved();
+                showToast('Section duplicated', 'success');
+            });
+            
+            toolbar.querySelector('.delete').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (container.children.length > 1) {
+                    element.remove();
+                    markUnsaved();
+                    showToast('Section deleted', 'success');
+                } else {
+                    showToast('Cannot delete the last item', 'error');
+                }
+            });
+        }
+
+        // ============================================
+        // Image Replacement
+        // ============================================
+        elements.imageInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !state.currentImageElement) return;
+            
+            try {
+                const base64 = await fileToBase64(file);
+                state.currentImageElement.src = base64;
+                markUnsaved();
+                showToast('Image replaced', 'success');
+            } catch (err) {
+                showToast('Failed to replace image: ' + err.message, 'error');
+            }
+            
+            elements.imageInput.value = '';
+            state.currentImageElement = null;
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // ============================================
+        // Firebase Configuration
+        // ============================================
+        function loadFirebaseConfig() {
+            const saved = localStorage.getItem('cms-firebase-config');
+            if (saved) {
+                state.firebaseConfig = JSON.parse(saved);
+                document.getElementById('firebase-apiKey').value = state.firebaseConfig.apiKey || '';
+                document.getElementById('firebase-authDomain').value = state.firebaseConfig.authDomain || '';
+                document.getElementById('firebase-projectId').value = state.firebaseConfig.projectId || '';
+                document.getElementById('firebase-siteId').value = state.firebaseConfig.siteId || '';
+                initializeFirebase();
+            }
+        }
+
+        function saveFirebaseConfig() {
+            state.firebaseConfig = {
+                apiKey: document.getElementById('firebase-apiKey').value,
+                authDomain: document.getElementById('firebase-authDomain').value,
+                projectId: document.getElementById('firebase-projectId').value,
+                siteId: document.getElementById('firebase-siteId').value || document.getElementById('firebase-projectId').value,
+            };
+            localStorage.setItem('cms-firebase-config', JSON.stringify(state.firebaseConfig));
+            initializeFirebase();
+            elements.settingsModal.classList.remove('active');
+            showToast('Firebase configuration saved', 'success');
+        }
+
+        function initializeFirebase() {
+            if (!state.firebaseConfig || !state.firebaseConfig.apiKey) {
+                updateFirebaseStatus(false, 'Not configured');
+                return;
+            }
+            
+            try {
+                if (state.firebaseApp) {
+                    // Already initialized
+                } else {
+                    state.firebaseApp = firebase.initializeApp({
+                        apiKey: state.firebaseConfig.apiKey,
+                        authDomain: state.firebaseConfig.authDomain,
+                        projectId: state.firebaseConfig.projectId,
+                    });
+                }
+                
+                firebase.auth().onAuthStateChanged((user) => {
+                    state.firebaseUser = user;
+                    if (user) {
+                        updateFirebaseStatus(true, `Signed in as ${user.email}`);
+                        elements.firebaseUser.textContent = `✓ Signed in as ${user.displayName || user.email}`;
+                        elements.btnFirebaseSignin.innerHTML = '<span>🚪</span> Sign Out';
+                    } else {
+                        updateFirebaseStatus(false, 'Not signed in');
+                        elements.firebaseUser.textContent = '';
+                        elements.btnFirebaseSignin.innerHTML = '<span>🔐</span> Sign in with Google';
+                    }
+                    updateDeployButton();
+                });
+                
+                updateFirebaseStatus(false, 'Configured (not signed in)');
+            } catch (err) {
+                updateFirebaseStatus(false, 'Configuration error');
+                showToast('Firebase initialization failed: ' + err.message, 'error');
+            }
+        }
+
+        function updateFirebaseStatus(connected, text) {
+            elements.firebaseStatus.classList.toggle('connected', connected);
+            elements.firebaseStatusText.textContent = `Firebase: ${text}`;
+        }
+
+        function updateDeployButton() {
+            elements.btnDeploy.disabled = !state.fileHandle || !state.firebaseUser;
+        }
+
+        async function signInWithGoogle() {
+            if (state.firebaseUser) {
+                await firebase.auth().signOut();
+                showToast('Signed out', 'success');
+            } else {
+                try {
+                    const provider = new firebase.auth.GoogleAuthProvider();
+                    await firebase.auth().signInWithPopup(provider);
+                    showToast('Signed in successfully', 'success');
+                } catch (err) {
+                    showToast('Sign in failed: ' + err.message, 'error');
+                }
+            }
+        }
+
+        // ============================================
+        // Firebase Deployment
+        // ============================================
+        async function deployToFirebase() {
+            if (!state.firebaseUser || !state.fileHandle) return;
+            
+            try {
+                showToast('Starting deployment...', 'info');
+                
+                const token = await state.firebaseUser.getIdToken();
+                const projectId = state.firebaseConfig.projectId;
+                const siteId = state.firebaseConfig.siteId || projectId;
+                const content = getEditedContent();
+                
+                // Step 1: Create a new version
+                const versionResponse = await fetch(
+                    `https://firebasehosting.googleapis.com/v1beta1/sites/${siteId}/versions`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            config: {
+                                rewrites: [{ glob: '**', path: '/index.html' }]
+                            }
+                        })
+                    }
+                );
+                
+                if (!versionResponse.ok) {
+                    throw new Error('Failed to create version: ' + await versionResponse.text());
+                }
+                
+                const versionData = await versionResponse.json();
+                const versionName = versionData.name;
+                
+                // Step 2: Calculate file hash and populate files
+                const hash = await sha256(content);
+                const gzippedContent = content; // For simplicity, not actually gzipping
+                
+                const populateResponse = await fetch(
+                    `https://firebasehosting.googleapis.com/v1beta1/${versionName}:populateFiles`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            files: {
+                                '/index.html': hash
+                            }
+                        })
+                    }
+                );
+                
+                if (!populateResponse.ok) {
+                    throw new Error('Failed to populate files: ' + await populateResponse.text());
+                }
+                
+                const populateData = await populateResponse.json();
+                
+                // Step 3: Upload file if needed
+                if (populateData.uploadRequiredHashes && populateData.uploadRequiredHashes.length > 0) {
+                    const uploadUrl = populateData.uploadUrl;
+                    
+                    const uploadResponse = await fetch(
+                        `${uploadUrl}/${hash}`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/octet-stream',
+                            },
+                            body: content
+                        }
+                    );
+                    
+                    if (!uploadResponse.ok) {
+                        throw new Error('Failed to upload file: ' + await uploadResponse.text());
+                    }
+                }
+                
+                // Step 4: Finalize the version
+                const finalizeResponse = await fetch(
+                    `https://firebasehosting.googleapis.com/v1beta1/${versionName}?update_mask=status`,
+                    {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            status: 'FINALIZED'
+                        })
+                    }
+                );
+                
+                if (!finalizeResponse.ok) {
+                    throw new Error('Failed to finalize version: ' + await finalizeResponse.text());
+                }
+                
+                // Step 5: Release the version
+                const releaseResponse = await fetch(
+                    `https://firebasehosting.googleapis.com/v1beta1/sites/${siteId}/releases?versionName=${versionName}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        }
+                    }
+                );
+                
+                if (!releaseResponse.ok) {
+                    throw new Error('Failed to release version: ' + await releaseResponse.text());
+                }
+                
+                showToast(`Deployed successfully to ${siteId}.web.app`, 'success');
+                
+            } catch (err) {
+                showToast('Deployment failed: ' + err.message, 'error');
+                console.error('Deployment error:', err);
+            }
+        }
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // ============================================
+        // Event Listeners
+        // ============================================
+        elements.btnOpen.addEventListener('click', openFile);
+        elements.btnOpenEmpty.addEventListener('click', openFile);
+        elements.btnSave.addEventListener('click', saveFile);
+        elements.btnSettings.addEventListener('click', () => {
+            elements.settingsModal.classList.add('active');
+        });
+        elements.settingsClose.addEventListener('click', () => {
+            elements.settingsModal.classList.remove('active');
+        });
+        elements.settingsCancel.addEventListener('click', () => {
+            elements.settingsModal.classList.remove('active');
+        });
+        elements.settingsSave.addEventListener('click', saveFirebaseConfig);
+        elements.btnFirebaseSignin.addEventListener('click', signInWithGoogle);
+        elements.btnDeploy.addEventListener('click', deployToFirebase);
+        
+        // Link modal events
+        elements.linkClose.addEventListener('click', () => {
+            elements.linkModal.classList.remove('active');
+            state.currentLinkElement = null;
+        });
+        elements.linkCancel.addEventListener('click', () => {
+            elements.linkModal.classList.remove('active');
+            state.currentLinkElement = null;
+        });
+        elements.linkSave.addEventListener('click', () => {
+            if (state.currentLinkElement) {
+                state.currentLinkElement.textContent = elements.linkText.value;
+                state.currentLinkElement.setAttribute('href', elements.linkUrl.value || '#');
+                markUnsaved();
+                showToast('Link updated', 'success');
+            }
+            elements.linkModal.classList.remove('active');
+            state.currentLinkElement = null;
+        });
+        elements.linkModal.addEventListener('click', (e) => {
+            if (e.target === elements.linkModal) {
+                elements.linkModal.classList.remove('active');
+                state.currentLinkElement = null;
+            }
+        });
+        // Allow Enter to save link
+        elements.linkUrl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                elements.linkSave.click();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 's') {
+                e.preventDefault();
+                if (state.fileHandle) saveFile();
+            }
+        });
+
+        // Click outside modal to close
+        elements.settingsModal.addEventListener('click', (e) => {
+            if (e.target === elements.settingsModal) {
+                elements.settingsModal.classList.remove('active');
+            }
+        });
+
+        // ============================================
+        // Initialize
+        // ============================================
+        loadFirebaseConfig();
+    </script>
+</body>
+</html>
+
