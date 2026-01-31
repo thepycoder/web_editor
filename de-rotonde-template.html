@@ -261,12 +261,12 @@
     }
     @media (min-width: 768px) {
       .hero {
-        grid-template-columns: minmax(320px, 2fr) 5fr;
+        grid-template-columns: minmax(350px, 5fr) 9fr;
       }
     }
     @media (min-width: 1200px) {
       .hero {
-        grid-template-columns: minmax(400px, 2fr) 5fr;
+        grid-template-columns: minmax(440px, 5fr) 9fr;
       }
     }
     .hero__card {
@@ -303,6 +303,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: 60% center;
       position: absolute;
       inset: 0;
     }
@@ -477,12 +478,12 @@
         <img data-editable-image="" src="https://placehold.co/200x60/3d9a7e/ffffff?text=Logo" alt="Logo">
       </a>
       <nav class="nav">
-        <ul class="nav__list">
-          <li><a href="/" class="nav__link nav__link--active" data-editable="">Home</a></li>
-          <li><a href="#team" class="nav__link" data-editable="">Team</a></li>
-          <li><a href="#contact" class="nav__link" data-editable="">Contact</a></li>
+        <ul class="nav__list" data-repeatable="">
+          <li><a href="/" class="nav__link nav__link--active" data-editable-link="">Home</a></li>
+          <li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
+          <li><a href="#contact" class="nav__link" data-editable-link="">Contact</a></li>
         </ul>
-        <a href="#afspraak" class="btn btn--primary" data-editable="">Afspraak maken</a>
+        <a href="#afspraak" class="btn btn--primary" data-editable-link="">Afspraak maken</a>
       </nav>
       <button class="nav-toggle" aria-label="Open menu" onclick="toggleMobileNav()">
         <span></span>
@@ -491,11 +492,11 @@
       </button>
     </div>
     <nav class="nav-mobile" id="mobileNav">
-      <ul class="nav-mobile__list">
-        <li><a href="/" class="nav-mobile__link" data-editable="">Home</a></li>
-        <li><a href="#team" class="nav-mobile__link" data-editable="">Team</a></li>
-        <li><a href="#contact" class="nav-mobile__link" data-editable="">Contact</a></li>
-        <li><a href="#afspraak" class="btn btn--primary" style="width: 100%; margin-top: var(--space-sm);" data-editable="">Afspraak maken</a></li>
+      <ul class="nav-mobile__list" data-repeatable="">
+        <li><a href="/" class="nav-mobile__link" data-editable-link="">Home</a></li>
+        <li><a href="#team" class="nav-mobile__link" data-editable-link="">Team</a></li>
+        <li><a href="#contact" class="nav-mobile__link" data-editable-link="">Contact</a></li>
+        <li><a href="#afspraak" class="btn btn--primary" style="width: 100%; margin-top: var(--space-sm);" data-editable-link="">Afspraak maken</a></li>
       </ul>
     </nav>
   </header>
