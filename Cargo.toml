@@ -1,0 +1,14 @@
+[package]
+name = "web-editor"
+version = "0.1.0"
+edition = "2021"
+description = "Standalone web editor with embedded HTTP server"
+
+[dependencies]
+tiny_http = "0.12"
+open = "5"
+
+[profile.release]
+strip = true
+lto = true
+opt-level = "z"

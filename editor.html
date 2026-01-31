@@ -372,10 +372,13 @@
             <span>💾</span> Save
         </button>
         <button class="btn btn-primary" id="btn-settings">
-            <span>⚙️</span> Firebase Settings
+            <span>⚙️</span> Deploy Settings
         </button>
-        <button class="btn btn-success" id="btn-deploy" disabled>
-            <span>🚀</span> Deploy
+        <button class="btn btn-success" id="btn-deploy-netlify" disabled>
+            <span>🚀</span> Deploy to Netlify
+        </button>
+        <button class="btn btn-success" id="btn-deploy-firebase" disabled>
+            <span>🔥</span> Deploy to Firebase
         </button>
     </header>
 
@@ -396,6 +399,10 @@
     </main>
 
     <footer class="status-bar">
+        <div class="status-item">
+            <div class="status-dot" id="netlify-status"></div>
+            <span id="netlify-status-text">Netlify: Not configured</span>
+        </div>
         <div class="status-item">
             <div class="status-dot" id="firebase-status"></div>
             <span id="firebase-status-text">Firebase: Not configured</span>
@@ -430,37 +437,72 @@
         </div>
     </div>
 
-    <!-- Firebase Settings Modal -->
+    <!-- Deploy Settings Modal -->
     <div class="modal-overlay" id="settings-modal">
-        <div class="modal">
+        <div class="modal" style="width: 550px;">
             <div class="modal-header">
-                <h2>Firebase Configuration</h2>
+                <h2>Deploy Settings</h2>
                 <button class="modal-close" id="settings-close">&times;</button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>API Key</label>
-                    <input type="text" id="firebase-apiKey" placeholder="AIzaSy...">
-                </div>
-                <div class="form-group">
-                    <label>Auth Domain</label>
-                    <input type="text" id="firebase-authDomain" placeholder="your-project.firebaseapp.com">
-                </div>
-                <div class="form-group">
-                    <label>Project ID</label>
-                    <input type="text" id="firebase-projectId" placeholder="your-project-id">
-                    <small>Find these values in Firebase Console → Project Settings → General</small>
-                </div>
-                <div class="form-group">
-                    <label>Site ID (optional)</label>
-                    <input type="text" id="firebase-siteId" placeholder="Leave empty to use project ID">
-                    <small>Only needed if you have multiple hosting sites</small>
-                </div>
-                <div style="margin-top: 20px;">
-                    <button class="btn" id="btn-firebase-signin" style="width: 100%; justify-content: center;">
-                        <span>🔐</span> Sign in with Google
+            <div class="modal-body" style="padding: 0;">
+                <!-- Tabs -->
+                <div style="display: flex; border-bottom: 1px solid var(--border);">
+                    <button class="settings-tab active" id="tab-netlify" style="flex: 1; padding: 12px; background: none; border: none; color: var(--text); cursor: pointer; font-size: 14px; font-weight: 500; border-bottom: 2px solid var(--accent);">
+                        🌐 Netlify
                     </button>
-                    <p id="firebase-user" style="margin-top: 12px; font-size: 13px; color: var(--text-muted); text-align: center;"></p>
+                    <button class="settings-tab" id="tab-firebase" style="flex: 1; padding: 12px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; font-weight: 500; border-bottom: 2px solid transparent;">
+                        🔥 Firebase
+                    </button>
+                </div>
+                
+                <!-- Netlify Panel -->
+                <div id="panel-netlify" style="padding: 20px;">
+                    <div class="form-group">
+                        <label>Personal Access Token</label>
+                        <input type="password" id="netlify-token" placeholder="nfp_xxxxxxxxxxxx">
+                        <small>Get your token from <a href="https://app.netlify.com/user/applications#personal-access-tokens" target="_blank" style="color: var(--accent);">Netlify User Settings → Applications → Personal access tokens</a></small>
+                    </div>
+                    <div class="form-group">
+                        <label>Site ID (optional)</label>
+                        <input type="text" id="netlify-siteId" placeholder="Leave empty to create a new site">
+                        <small>Use an existing site ID to update it, or leave empty to create a new site each deploy</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Domain (optional)</label>
+                        <input type="text" id="netlify-customDomain" placeholder="my-site">
+                        <small>Subdomain for new sites (e.g., "my-site" → my-site.netlify.app)</small>
+                    </div>
+                </div>
+                
+                <!-- Firebase Panel -->
+                <div id="panel-firebase" style="padding: 20px; display: none;">
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="text" id="firebase-apiKey" placeholder="AIzaSy...">
+                    </div>
+                    <div class="form-group">
+                        <label>Auth Domain</label>
+                        <input type="text" id="firebase-authDomain" placeholder="your-project.firebaseapp.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Project ID</label>
+                        <input type="text" id="firebase-projectId" placeholder="your-project-id">
+                        <small>Find these values in Firebase Console → Project Settings → General</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Site ID (optional)</label>
+                        <input type="text" id="firebase-siteId" placeholder="Leave empty to use project ID">
+                        <small>Only needed if you have multiple hosting sites</small>
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <button class="btn" id="btn-firebase-signin" style="width: 100%; justify-content: center;">
+                            <span>🔐</span> Sign in with Google
+                        </button>
+                        <p id="firebase-user" style="margin-top: 12px; font-size: 13px; color: var(--text-muted); text-align: center;"></p>
+                    </div>
+                    <div style="margin-top: 12px; padding: 12px; background: var(--bg-dark); border-radius: 6px; font-size: 12px; color: var(--text-muted);">
+                        ⚠️ Firebase may have CORS issues when running locally. Consider using Netlify instead.
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -491,6 +533,8 @@
             firebaseConfig: null,
             firebaseUser: null,
             firebaseApp: null,
+            oauthAccessToken: null,
+            netlifyConfig: null,
         };
 
         // ============================================
@@ -501,7 +545,8 @@
             btnOpenEmpty: document.getElementById('btn-open-empty'),
             btnSave: document.getElementById('btn-save'),
             btnSettings: document.getElementById('btn-settings'),
-            btnDeploy: document.getElementById('btn-deploy'),
+            btnDeployNetlify: document.getElementById('btn-deploy-netlify'),
+            btnDeployFirebase: document.getElementById('btn-deploy-firebase'),
             fileName: document.getElementById('file-name'),
             unsavedIndicator: document.getElementById('unsaved-indicator'),
             emptyState: document.getElementById('empty-state'),
@@ -511,10 +556,23 @@
             settingsClose: document.getElementById('settings-close'),
             settingsCancel: document.getElementById('settings-cancel'),
             settingsSave: document.getElementById('settings-save'),
+            // Tabs
+            tabNetlify: document.getElementById('tab-netlify'),
+            tabFirebase: document.getElementById('tab-firebase'),
+            panelNetlify: document.getElementById('panel-netlify'),
+            panelFirebase: document.getElementById('panel-firebase'),
+            // Netlify
+            netlifyToken: document.getElementById('netlify-token'),
+            netlifySiteId: document.getElementById('netlify-siteId'),
+            netlifyCustomDomain: document.getElementById('netlify-customDomain'),
+            netlifyStatus: document.getElementById('netlify-status'),
+            netlifyStatusText: document.getElementById('netlify-status-text'),
+            // Firebase
             btnFirebaseSignin: document.getElementById('btn-firebase-signin'),
             firebaseUser: document.getElementById('firebase-user'),
             firebaseStatus: document.getElementById('firebase-status'),
             firebaseStatusText: document.getElementById('firebase-status-text'),
+            // Other
             toastContainer: document.getElementById('toast-container'),
             imageInput: document.getElementById('image-input'),
             linkModal: document.getElementById('link-modal'),
@@ -1008,8 +1066,6 @@
             };
             localStorage.setItem('cms-firebase-config', JSON.stringify(state.firebaseConfig));
             initializeFirebase();
-            elements.settingsModal.classList.remove('active');
-            showToast('Firebase configuration saved', 'success');
         }
 
         function initializeFirebase() {
@@ -1032,8 +1088,14 @@
                 firebase.auth().onAuthStateChanged((user) => {
                     state.firebaseUser = user;
                     if (user) {
-                        updateFirebaseStatus(true, `Signed in as ${user.email}`);
-                        elements.firebaseUser.textContent = `✓ Signed in as ${user.displayName || user.email}`;
+                        if (state.oauthAccessToken) {
+                            updateFirebaseStatus(true, `Signed in as ${user.email}`);
+                            elements.firebaseUser.textContent = `✓ Signed in as ${user.displayName || user.email}`;
+                        } else {
+                            // User is signed in but we don't have the OAuth token (page was refreshed)
+                            updateFirebaseStatus(false, 'Please sign in again to deploy');
+                            elements.firebaseUser.textContent = `⚠ Session expired - sign in again to deploy`;
+                        }
                         elements.btnFirebaseSignin.innerHTML = '<span>🚪</span> Sign Out';
                     } else {
                         updateFirebaseStatus(false, 'Not signed in');
@@ -1056,17 +1118,22 @@
         }
 
         function updateDeployButton() {
-            elements.btnDeploy.disabled = !state.fileHandle || !state.firebaseUser;
+            updateDeployButtons();
         }
 
         async function signInWithGoogle() {
             if (state.firebaseUser) {
                 await firebase.auth().signOut();
+                state.oauthAccessToken = null;
                 showToast('Signed out', 'success');
             } else {
                 try {
                     const provider = new firebase.auth.GoogleAuthProvider();
-                    await firebase.auth().signInWithPopup(provider);
+                    // Request scope for Firebase Hosting API
+                    provider.addScope('https://www.googleapis.com/auth/firebase.hosting');
+                    const result = await firebase.auth().signInWithPopup(provider);
+                    // Get the OAuth access token (needed for Hosting API)
+                    state.oauthAccessToken = result.credential.accessToken;
                     showToast('Signed in successfully', 'success');
                 } catch (err) {
                     showToast('Sign in failed: ' + err.message, 'error');
@@ -1080,10 +1147,15 @@
         async function deployToFirebase() {
             if (!state.firebaseUser || !state.fileHandle) return;
             
+            if (!state.oauthAccessToken) {
+                showToast('Please sign out and sign in again to refresh credentials', 'error');
+                return;
+            }
+            
             try {
                 showToast('Starting deployment...', 'info');
                 
-                const token = await state.firebaseUser.getIdToken();
+                const token = state.oauthAccessToken;
                 const projectId = state.firebaseConfig.projectId;
                 const siteId = state.firebaseConfig.siteId || projectId;
                 const content = getEditedContent();
@@ -1210,6 +1282,176 @@
         }
 
         // ============================================
+        // Netlify Configuration
+        // ============================================
+        function loadNetlifyConfig() {
+            const saved = localStorage.getItem('cms-netlify-config');
+            if (saved) {
+                state.netlifyConfig = JSON.parse(saved);
+                elements.netlifyToken.value = state.netlifyConfig.token || '';
+                elements.netlifySiteId.value = state.netlifyConfig.siteId || '';
+                elements.netlifyCustomDomain.value = state.netlifyConfig.customDomain || '';
+            }
+            updateNetlifyStatus();
+        }
+
+        function saveNetlifyConfig() {
+            state.netlifyConfig = {
+                token: elements.netlifyToken.value,
+                siteId: elements.netlifySiteId.value,
+                customDomain: elements.netlifyCustomDomain.value,
+            };
+            localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
+            updateNetlifyStatus();
+        }
+
+        function updateNetlifyStatus() {
+            const configured = state.netlifyConfig && state.netlifyConfig.token;
+            elements.netlifyStatus.classList.toggle('connected', configured);
+            if (configured) {
+                const siteInfo = state.netlifyConfig.siteId ? `Site: ${state.netlifyConfig.siteId}` : 'New site on deploy';
+                elements.netlifyStatusText.textContent = `Netlify: ${siteInfo}`;
+            } else {
+                elements.netlifyStatusText.textContent = 'Netlify: Not configured';
+            }
+            updateDeployButtons();
+        }
+
+        // ============================================
+        // Netlify Deployment
+        // ============================================
+        async function deployToNetlify() {
+            if (!state.netlifyConfig || !state.netlifyConfig.token || !state.fileHandle) return;
+            
+            try {
+                showToast('Starting Netlify deployment...', 'info');
+                elements.btnDeployNetlify.disabled = true;
+                
+                const content = getEditedContent();
+                const token = state.netlifyConfig.token;
+                let siteId = state.netlifyConfig.siteId;
+                let siteUrl = '';
+                
+                // Step 1: Create a new site if we don't have one
+                if (!siteId) {
+                    const siteBody = {};
+                    if (state.netlifyConfig.customDomain) {
+                        siteBody.name = state.netlifyConfig.customDomain;
+                    }
+                    
+                    const createSiteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(siteBody),
+                    });
+                    
+                    if (!createSiteResponse.ok) {
+                        const errorText = await createSiteResponse.text();
+                        throw new Error(`Failed to create site: ${errorText}`);
+                    }
+                    
+                    const siteData = await createSiteResponse.json();
+                    siteId = siteData.id;
+                    siteUrl = siteData.ssl_url || siteData.url || `https://${siteData.subdomain}.netlify.app`;
+                    
+                    // Save the site ID for future deploys
+                    state.netlifyConfig.siteId = siteId;
+                    elements.netlifySiteId.value = siteId;
+                    localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
+                    updateNetlifyStatus();
+                    
+                    showToast(`Created new site: ${siteUrl}`, 'info');
+                }
+                
+                // Step 2: Calculate SHA1 hash of the content
+                const fileHash = await sha1(content);
+                
+                // Step 3: Create a deploy with file digest (tells Netlify what files we have)
+                const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            '/index.html': fileHash
+                        }
+                    }),
+                });
+                
+                if (!deployResponse.ok) {
+                    const errorText = await deployResponse.text();
+                    throw new Error(`Failed to create deploy: ${errorText}`);
+                }
+                
+                const deployData = await deployResponse.json();
+                const deployId = deployData.id;
+                if (!siteUrl) {
+                    siteUrl = deployData.ssl_url || deployData.url || `https://${deployData.subdomain}.netlify.app`;
+                }
+                
+                // Step 4: Upload files that Netlify needs (check required array)
+                const required = deployData.required || [];
+                if (required.includes(fileHash)) {
+                    const uploadResponse = await fetch(
+                        `https://api.netlify.com/api/v1/deploys/${deployId}/files/index.html`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/octet-stream',
+                            },
+                            body: content,
+                        }
+                    );
+                    
+                    if (!uploadResponse.ok) {
+                        const errorText = await uploadResponse.text();
+                        throw new Error(`Failed to upload file: ${errorText}`);
+                    }
+                }
+                
+                showToast(`Deployed to Netlify!`, 'success');
+                
+                // Open the deployed site
+                setTimeout(() => {
+                    if (confirm(`Deployment successful!\n\nOpen ${siteUrl}?`)) {
+                        window.open(siteUrl, '_blank');
+                    }
+                }, 500);
+                
+            } catch (err) {
+                showToast('Netlify deployment failed: ' + err.message, 'error');
+                console.error('Netlify deployment error:', err);
+            } finally {
+                updateDeployButtons();
+            }
+        }
+
+        async function sha1(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // ============================================
+        // Deploy Button State
+        // ============================================
+        function updateDeployButtons() {
+            const hasFile = !!state.fileHandle;
+            const netlifyReady = hasFile && state.netlifyConfig && state.netlifyConfig.token;
+            const firebaseReady = hasFile && state.firebaseUser && state.oauthAccessToken;
+            
+            elements.btnDeployNetlify.disabled = !netlifyReady;
+            elements.btnDeployFirebase.disabled = !firebaseReady;
+        }
+
+        // ============================================
         // Event Listeners
         // ============================================
         elements.btnOpen.addEventListener('click', openFile);
@@ -1224,9 +1466,33 @@
         elements.settingsCancel.addEventListener('click', () => {
             elements.settingsModal.classList.remove('active');
         });
-        elements.settingsSave.addEventListener('click', saveFirebaseConfig);
+        elements.settingsSave.addEventListener('click', () => {
+            saveNetlifyConfig();
+            saveFirebaseConfig();
+            elements.settingsModal.classList.remove('active');
+            showToast('Configuration saved', 'success');
+        });
         elements.btnFirebaseSignin.addEventListener('click', signInWithGoogle);
-        elements.btnDeploy.addEventListener('click', deployToFirebase);
+        elements.btnDeployNetlify.addEventListener('click', deployToNetlify);
+        elements.btnDeployFirebase.addEventListener('click', deployToFirebase);
+        
+        // Tab switching
+        elements.tabNetlify.addEventListener('click', () => {
+            elements.tabNetlify.style.color = 'var(--text)';
+            elements.tabNetlify.style.borderBottomColor = 'var(--accent)';
+            elements.tabFirebase.style.color = 'var(--text-muted)';
+            elements.tabFirebase.style.borderBottomColor = 'transparent';
+            elements.panelNetlify.style.display = 'block';
+            elements.panelFirebase.style.display = 'none';
+        });
+        elements.tabFirebase.addEventListener('click', () => {
+            elements.tabFirebase.style.color = 'var(--text)';
+            elements.tabFirebase.style.borderBottomColor = 'var(--accent)';
+            elements.tabNetlify.style.color = 'var(--text-muted)';
+            elements.tabNetlify.style.borderBottomColor = 'transparent';
+            elements.panelFirebase.style.display = 'block';
+            elements.panelNetlify.style.display = 'none';
+        });
         
         // Link modal events
         elements.linkClose.addEventListener('click', () => {
@@ -1279,6 +1545,7 @@
         // ============================================
         // Initialize
         // ============================================
+        loadNetlifyConfig();
         loadFirebaseConfig();
     </script>
 </body>
