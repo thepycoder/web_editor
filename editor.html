@@ -131,6 +131,40 @@
             margin-left: -8px;
         }
 
+        /* Viewport Buttons */
+        .viewport-buttons {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-dark);
+            padding: 4px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .viewport-btn {
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        .viewport-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text);
+        }
+
+        .viewport-btn.active {
+            background: var(--accent);
+            color: #000;
+        }
+
         /* Main Content */
         .main {
             flex: 1;
@@ -150,6 +184,9 @@
             flex: 1;
             padding: 20px;
             overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
 
         #preview-frame {
@@ -160,6 +197,23 @@
             background: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            transition: width 0.3s ease, max-width 0.3s ease;
+        }
+
+        /* Viewport modes */
+        #preview-frame.viewport-desktop {
+            width: 100%;
+            max-width: none;
+        }
+
+        #preview-frame.viewport-tablet {
+            width: 768px;
+            max-width: 768px;
+        }
+
+        #preview-frame.viewport-phone {
+            width: 375px;
+            max-width: 375px;
         }
 
         /* Empty State */
@@ -364,10 +418,21 @@
     <header class="toolbar">
         <h1>ProjectWhy CMS</h1>
         <button class="btn" id="btn-open">
-            <span>📂</span> Open HTML
+            <span>📂</span> Open Project
         </button>
         <span class="file-name" id="file-name" style="display: none;"></span>
         <span class="unsaved-indicator" id="unsaved-indicator" style="display: none;">● Unsaved</span>
+        <div class="viewport-buttons" id="viewport-buttons">
+            <button class="viewport-btn active" id="viewport-desktop" title="Desktop view (100%)">
+                <span>🖥️</span>
+            </button>
+            <button class="viewport-btn" id="viewport-tablet" title="Tablet view (768px)">
+                <span>📱</span>
+            </button>
+            <button class="viewport-btn" id="viewport-phone" title="Phone view (375px)">
+                <span>📲</span>
+            </button>
+        </div>
         <button class="btn" id="btn-save" disabled>
             <span>💾</span> Save
         </button>
@@ -382,11 +447,11 @@
     <main class="main">
         <div class="preview-container">
             <div class="empty-state" id="empty-state">
-                <div class="empty-state-icon">📄</div>
-                <h2>No file open</h2>
-                <p>Open an HTML file to start editing. The file should contain <code>data-editable</code>, <code>data-editable-image</code>, <code>data-editable-link</code>, <code>data-toggleable</code>, or <code>data-repeatable</code> attributes to mark editable regions.</p>
+                <div class="empty-state-icon">📁</div>
+                <h2>No project open</h2>
+                <p>Open a project folder containing an <code>index.html</code> file to start editing. Images will be stored in an <code>assets/</code> subfolder. Use <code>data-editable</code>, <code>data-editable-image</code>, <code>data-editable-link</code>, <code>data-toggleable</code>, or <code>data-repeatable</code> attributes to mark editable regions.</p>
                 <button class="btn btn-primary" id="btn-open-empty">
-                    <span>📂</span> Open HTML File
+                    <span>📂</span> Open Project Folder
                 </button>
             </div>
             <div class="preview-wrapper" id="preview-wrapper" style="display: none;">
@@ -477,10 +542,18 @@
         // State Management
         // ============================================
         const state = {
-            fileHandle: null,
+            fileHandle: null,           // Handle for index.html
             originalContent: '',
             hasUnsavedChanges: false,
             netlifyConfig: null,
+            // Directory-based asset management
+            dirHandle: null,            // Project directory handle
+            assetsHandle: null,         // assets/ subdirectory handle
+            assetRefs: new Map(),       // filename -> Set of element references
+            pendingDeletes: new Set(),  // files to delete on save
+            assetBlobUrls: new Map(),   // filename -> blob URL for preview rendering
+            // Viewport mode
+            currentViewport: 'desktop', // 'desktop' | 'tablet' | 'phone'
         };
 
         // ============================================
@@ -516,6 +589,10 @@
             linkSave: document.getElementById('link-save'),
             linkText: document.getElementById('link-text'),
             linkUrl: document.getElementById('link-url'),
+            // Viewport buttons
+            viewportDesktop: document.getElementById('viewport-desktop'),
+            viewportTablet: document.getElementById('viewport-tablet'),
+            viewportPhone: document.getElementById('viewport-phone'),
         };
 
         // ============================================
@@ -533,23 +610,79 @@
         }
 
         // ============================================
+        // Viewport Mode
+        // ============================================
+        function setViewportMode(mode) {
+            // Validate mode
+            if (!['desktop', 'tablet', 'phone'].includes(mode)) {
+                console.warn('Invalid viewport mode:', mode);
+                return;
+            }
+
+            // Update state
+            state.currentViewport = mode;
+
+            // Update button states
+            elements.viewportDesktop.classList.toggle('active', mode === 'desktop');
+            elements.viewportTablet.classList.toggle('active', mode === 'tablet');
+            elements.viewportPhone.classList.toggle('active', mode === 'phone');
+
+            // Update preview frame class
+            elements.previewFrame.classList.remove('viewport-desktop', 'viewport-tablet', 'viewport-phone');
+            elements.previewFrame.classList.add(`viewport-${mode}`);
+        }
+
+        // ============================================
         // File System Operations
         // ============================================
-        async function openFile() {
+        async function openProject() {
             try {
-                const [handle] = await window.showOpenFilePicker({
-                    types: [{
-                        description: 'HTML Files',
-                        accept: { 'text/html': ['.html', '.htm'] }
-                    }]
-                });
-                state.fileHandle = handle;
-                const file = await handle.getFile();
+                const dirHandle = await window.showDirectoryPicker();
+                
+                // Check for index.html
+                let fileHandle;
+                try {
+                    fileHandle = await dirHandle.getFileHandle('index.html');
+                } catch (err) {
+                    showToast('No index.html found in selected folder. Please select a project folder containing index.html.', 'error');
+                    return;
+                }
+                
+                // Get or create assets folder
+                const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
+                
+                // Revoke old blob URLs before clearing
+                for (const url of state.assetBlobUrls.values()) {
+                    URL.revokeObjectURL(url);
+                }
+                
+                // Update state
+                state.dirHandle = dirHandle;
+                state.assetsHandle = assetsHandle;
+                state.fileHandle = fileHandle;
+                state.assetRefs.clear();
+                state.pendingDeletes.clear();
+                state.assetBlobUrls.clear();
+                
+                // Load all assets as blob URLs for preview rendering
+                for await (const entry of assetsHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const file = await entry.getFile();
+                        const blobUrl = URL.createObjectURL(file);
+                        state.assetBlobUrls.set(entry.name, blobUrl);
+                    }
+                }
+                
+                // Load index.html
+                const file = await fileHandle.getFile();
                 const content = await file.text();
                 state.originalContent = content;
                 state.hasUnsavedChanges = false;
                 
-                elements.fileName.textContent = file.name;
+                // Scan and track all asset references
+                scanAssetReferences(content);
+                
+                elements.fileName.textContent = dirHandle.name;
                 elements.fileName.style.display = 'block';
                 elements.unsavedIndicator.style.display = 'none';
                 elements.btnSave.disabled = false;
@@ -558,29 +691,81 @@
                 
                 renderPreview(content);
                 updateDeployButtons();
-                showToast(`Opened ${file.name}`, 'success');
+                showToast(`Opened project: ${dirHandle.name}`, 'success');
             } catch (err) {
                 if (err.name !== 'AbortError') {
-                    showToast('Failed to open file: ' + err.message, 'error');
+                    showToast('Failed to open project: ' + err.message, 'error');
                 }
             }
         }
+        
+        // Scan HTML content for asset references and build tracking map
+        function scanAssetReferences(content) {
+            state.assetRefs.clear();
+            const regex = /\.\/assets\/([^"'\s)]+)/g;
+            let match;
+            while ((match = regex.exec(content)) !== null) {
+                const filename = match[1];
+                if (!state.assetRefs.has(filename)) {
+                    state.assetRefs.set(filename, new Set());
+                }
+            }
+        }
+        
+        // Build element-to-asset reference map from the live document
+        function buildElementRefs(doc) {
+            // Clear element references but keep filenames
+            for (const refs of state.assetRefs.values()) {
+                refs.clear();
+            }
+            
+            // Find all images with asset references
+            // Note: src is now a blob URL, so we need to reverse-lookup the filename
+            doc.querySelectorAll('[data-editable-image]').forEach(img => {
+                const src = img.getAttribute('src') || '';
+                // Find which filename this blob URL belongs to
+                for (const [filename, blobUrl] of state.assetBlobUrls) {
+                    if (src === blobUrl) {
+                        if (state.assetRefs.has(filename)) {
+                            state.assetRefs.get(filename).add(img);
+                        }
+                        // Store filename on element for later reference
+                        img.dataset.assetFilename = filename;
+                        break;
+                    }
+                }
+            });
+        }
 
         async function saveFile() {
-            if (!state.fileHandle) return;
+            if (!state.fileHandle || !state.dirHandle) return;
             
             try {
+                // Save HTML content
                 const content = getEditedContent();
                 const writable = await state.fileHandle.createWritable();
                 await writable.write(content);
                 await writable.close();
                 
+                // Delete orphaned assets
+                for (const filename of state.pendingDeletes) {
+                    try {
+                        await state.assetsHandle.removeEntry(filename);
+                    } catch (err) {
+                        console.warn(`Could not delete ${filename}:`, err);
+                    }
+                }
+                state.pendingDeletes.clear();
+                
+                // Re-scan references to ensure consistency
+                scanAssetReferences(content);
+                
                 state.originalContent = content;
                 state.hasUnsavedChanges = false;
                 elements.unsavedIndicator.style.display = 'none';
-                showToast('File saved successfully', 'success');
+                showToast('Project saved', 'success');
             } catch (err) {
-                showToast('Failed to save file: ' + err.message, 'error');
+                showToast('Failed to save project: ' + err.message, 'error');
             }
         }
 
@@ -622,6 +807,15 @@
                 el.removeAttribute('contenteditable');
             });
             
+            // Convert blob URLs back to ./assets/ paths for images
+            clone.querySelectorAll('[data-editable-image]').forEach(img => {
+                const filename = img.dataset.assetFilename;
+                if (filename) {
+                    img.setAttribute('src', `./assets/${filename}`);
+                    img.removeAttribute('data-asset-filename');
+                }
+            });
+            
             // Get the HTML with doctype
             const doctype = doc.doctype 
                 ? `<!DOCTYPE ${doc.doctype.name}${doc.doctype.publicId ? ` PUBLIC "${doc.doctype.publicId}"` : ''}${doc.doctype.systemId ? ` "${doc.doctype.systemId}"` : ''}>\n`
@@ -637,8 +831,16 @@
             const frame = elements.previewFrame;
             const doc = frame.contentDocument;
             
+            // Replace ./assets/ paths with blob URLs for preview
+            let previewContent = content;
+            for (const [filename, blobUrl] of state.assetBlobUrls) {
+                // Replace all occurrences of ./assets/filename with the blob URL
+                const assetPath = `./assets/${filename}`;
+                previewContent = previewContent.split(assetPath).join(blobUrl);
+            }
+            
             doc.open();
-            doc.write(content);
+            doc.write(previewContent);
             doc.close();
             
             // Inject editor styles and functionality
@@ -646,6 +848,9 @@
             setupEditableElements(doc);
             setupToggleableElements(doc);
             setupRepeatableSections(doc);
+            
+            // Build element-to-asset reference tracking
+            buildElementRefs(doc);
         }
 
         function injectEditorStyles(doc) {
@@ -875,6 +1080,39 @@
                 : `<button class="cms-toggle-btn" title="Hide this element">👁️ Visible</button>`;
         }
 
+        // Add asset references for all images within an element
+        function addAssetRefsForElement(element) {
+            element.querySelectorAll('[data-editable-image]').forEach(img => {
+                const filename = img.dataset.assetFilename;
+                if (filename) {
+                    if (!state.assetRefs.has(filename)) {
+                        state.assetRefs.set(filename, new Set());
+                    }
+                    state.assetRefs.get(filename).add(img);
+                }
+            });
+        }
+        
+        // Remove asset references for all images within an element, queue orphans for deletion
+        function removeAssetRefsForElement(element) {
+            element.querySelectorAll('[data-editable-image]').forEach(img => {
+                const filename = img.dataset.assetFilename;
+                if (filename && state.assetRefs.has(filename)) {
+                    state.assetRefs.get(filename).delete(img);
+                    if (state.assetRefs.get(filename).size === 0) {
+                        // No more references - schedule for deletion
+                        state.pendingDeletes.add(filename);
+                        state.assetRefs.delete(filename);
+                        // Revoke blob URL
+                        if (state.assetBlobUrls.has(filename)) {
+                            URL.revokeObjectURL(state.assetBlobUrls.get(filename));
+                            state.assetBlobUrls.delete(filename);
+                        }
+                    }
+                }
+            });
+        }
+
         function setupRepeatableSections(doc) {
             doc.querySelectorAll('[data-repeatable]').forEach(container => {
                 Array.from(container.children).forEach(child => {
@@ -901,6 +1139,8 @@
                         child.parentNode.insertBefore(clone, child.nextSibling);
                         setupEditableElements(doc);
                         setupClonedSectionEvents(clone, doc);
+                        // Track asset refs for cloned images
+                        addAssetRefsForElement(clone);
                         markUnsaved();
                         showToast('Section duplicated', 'success');
                     });
@@ -909,6 +1149,8 @@
                     toolbar.querySelector('.delete').addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (container.children.length > 1) {
+                            // Remove asset refs before removing element
+                            removeAssetRefsForElement(child);
                             child.remove();
                             markUnsaved();
                             showToast('Section deleted', 'success');
@@ -932,6 +1174,8 @@
                 element.parentNode.insertBefore(clone, element.nextSibling);
                 setupEditableElements(doc);
                 setupClonedSectionEvents(clone, doc);
+                // Track asset refs for cloned images
+                addAssetRefsForElement(clone);
                 markUnsaved();
                 showToast('Section duplicated', 'success');
             });
@@ -939,6 +1183,8 @@
             toolbar.querySelector('.delete').addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (container.children.length > 1) {
+                    // Remove asset refs before removing element
+                    removeAssetRefsForElement(element);
                     element.remove();
                     markUnsaved();
                     showToast('Section deleted', 'success');
@@ -953,11 +1199,61 @@
         // ============================================
         elements.imageInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
-            if (!file || !state.currentImageElement) return;
+            const img = state.currentImageElement;
+            if (!file || !img) return;
+            
+            // Check if we have a project open (directory-based)
+            if (!state.assetsHandle) {
+                showToast('Please open a project folder first', 'error');
+                elements.imageInput.value = '';
+                state.currentImageElement = null;
+                return;
+            }
             
             try {
-                const base64 = await fileToBase64(file);
-                state.currentImageElement.src = base64;
+                // Get old image filename from the original src attribute or data attribute
+                // The img.src in the iframe will be a blob URL, so we need to track the original filename
+                const oldFilename = img.dataset.assetFilename || null;
+                
+                // Generate new filename with timestamp to avoid conflicts
+                const ext = file.name.split('.').pop().toLowerCase();
+                const newFilename = `img-${Date.now()}.${ext}`;
+                
+                // Write new file to assets folder
+                const newFileHandle = await state.assetsHandle.getFileHandle(newFilename, { create: true });
+                const writable = await newFileHandle.createWritable();
+                await writable.write(file);
+                await writable.close();
+                
+                // Update reference tracking - remove from old
+                if (oldFilename && state.assetRefs.has(oldFilename)) {
+                    state.assetRefs.get(oldFilename).delete(img);
+                    if (state.assetRefs.get(oldFilename).size === 0) {
+                        // No more references - schedule for deletion
+                        state.pendingDeletes.add(oldFilename);
+                        state.assetRefs.delete(oldFilename);
+                        // Revoke old blob URL
+                        if (state.assetBlobUrls.has(oldFilename)) {
+                            URL.revokeObjectURL(state.assetBlobUrls.get(oldFilename));
+                            state.assetBlobUrls.delete(oldFilename);
+                        }
+                    }
+                }
+                
+                // Track new reference
+                if (!state.assetRefs.has(newFilename)) {
+                    state.assetRefs.set(newFilename, new Set());
+                }
+                state.assetRefs.get(newFilename).add(img);
+                
+                // Create blob URL for the new image for preview display
+                const newBlobUrl = URL.createObjectURL(file);
+                state.assetBlobUrls.set(newFilename, newBlobUrl);
+                
+                // Update image src to blob URL for display, store filename for saving
+                img.src = newBlobUrl;
+                img.dataset.assetFilename = newFilename;
+                
                 markUnsaved();
                 showToast('Image replaced', 'success');
             } catch (err) {
@@ -967,15 +1263,6 @@
             elements.imageInput.value = '';
             state.currentImageElement = null;
         });
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
 
         // ============================================
         // Netlify Configuration
@@ -1017,7 +1304,7 @@
         // Netlify Deployment
         // ============================================
         async function deployToNetlify() {
-            if (!state.netlifyConfig || !state.netlifyConfig.token || !state.fileHandle) return;
+            if (!state.netlifyConfig || !state.netlifyConfig.token || !state.fileHandle || !state.dirHandle) return;
             
             try {
                 showToast('Starting Netlify deployment...', 'info');
@@ -1062,8 +1349,26 @@
                     showToast(`Created new site: ${siteUrl}`, 'info');
                 }
                 
-                // Step 2: Calculate SHA1 hash of the content
-                const fileHash = await sha1(content);
+                // Step 2: Build file manifest with hashes
+                const files = {};
+                const fileContents = new Map(); // path -> content/blob for uploading
+                
+                // Add index.html
+                const htmlHash = await sha1(content);
+                files['/index.html'] = htmlHash;
+                fileContents.set('/index.html', content);
+                
+                // Add all assets from the assets folder
+                showToast('Scanning assets...', 'info');
+                for await (const entry of state.assetsHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const file = await entry.getFile();
+                        const buffer = await file.arrayBuffer();
+                        const hash = await sha1Binary(buffer);
+                        files[`/assets/${entry.name}`] = hash;
+                        fileContents.set(`/assets/${entry.name}`, file);
+                    }
+                }
                 
                 // Step 3: Create a deploy with file digest (tells Netlify what files we have)
                 const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
@@ -1072,11 +1377,7 @@
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        files: {
-                            '/index.html': fileHash
-                        }
-                    }),
+                    body: JSON.stringify({ files }),
                 });
                 
                 if (!deployResponse.ok) {
@@ -1092,22 +1393,33 @@
                 
                 // Step 4: Upload files that Netlify needs (check required array)
                 const required = deployData.required || [];
-                if (required.includes(fileHash)) {
-                    const uploadResponse = await fetch(
-                        `https://api.netlify.com/api/v1/deploys/${deployId}/files/index.html`,
-                        {
-                            method: 'PUT',
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/octet-stream',
-                            },
-                            body: content,
+                const totalToUpload = required.length;
+                let uploadedCount = 0;
+                
+                for (const [path, hash] of Object.entries(files)) {
+                    if (required.includes(hash)) {
+                        const fileContent = fileContents.get(path);
+                        const uploadResponse = await fetch(
+                            `https://api.netlify.com/api/v1/deploys/${deployId}/files${path}`,
+                            {
+                                method: 'PUT',
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/octet-stream',
+                                },
+                                body: fileContent,
+                            }
+                        );
+                        
+                        if (!uploadResponse.ok) {
+                            const errorText = await uploadResponse.text();
+                            throw new Error(`Failed to upload ${path}: ${errorText}`);
                         }
-                    );
-                    
-                    if (!uploadResponse.ok) {
-                        const errorText = await uploadResponse.text();
-                        throw new Error(`Failed to upload file: ${errorText}`);
+                        
+                        uploadedCount++;
+                        if (totalToUpload > 1) {
+                            showToast(`Uploading... (${uploadedCount}/${totalToUpload})`, 'info');
+                        }
                     }
                 }
                 
@@ -1128,9 +1440,17 @@
             }
         }
 
+        // SHA1 hash for text content
         async function sha1(message) {
             const msgBuffer = new TextEncoder().encode(message);
             const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        
+        // SHA1 hash for binary content (ArrayBuffer)
+        async function sha1Binary(buffer) {
+            const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         }
@@ -1139,8 +1459,8 @@
         // Deploy Button State
         // ============================================
         function updateDeployButtons() {
-            const hasFile = !!state.fileHandle;
-            const netlifyReady = hasFile && state.netlifyConfig && state.netlifyConfig.token;
+            const hasProject = !!state.fileHandle && !!state.dirHandle;
+            const netlifyReady = hasProject && state.netlifyConfig && state.netlifyConfig.token;
             
             elements.btnDeployNetlify.disabled = !netlifyReady;
         }
@@ -1148,8 +1468,8 @@
         // ============================================
         // Event Listeners
         // ============================================
-        elements.btnOpen.addEventListener('click', openFile);
-        elements.btnOpenEmpty.addEventListener('click', openFile);
+        elements.btnOpen.addEventListener('click', openProject);
+        elements.btnOpenEmpty.addEventListener('click', openProject);
         elements.btnSave.addEventListener('click', saveFile);
         elements.btnSettings.addEventListener('click', () => {
             elements.settingsModal.classList.add('active');
@@ -1166,7 +1486,12 @@
             showToast('Configuration saved', 'success');
         });
         elements.btnDeployNetlify.addEventListener('click', deployToNetlify);
-        
+
+        // Viewport mode buttons
+        elements.viewportDesktop.addEventListener('click', () => setViewportMode('desktop'));
+        elements.viewportTablet.addEventListener('click', () => setViewportMode('tablet'));
+        elements.viewportPhone.addEventListener('click', () => setViewportMode('phone'));
+
         // Link modal events
         elements.linkClose.addEventListener('click', () => {
             elements.linkModal.classList.remove('active');
@@ -1219,6 +1544,21 @@
         // Initialize
         // ============================================
         loadNetlifyConfig();
+
+        // ============================================
+        // Test Harness Exports
+        // Expose internal functions for Playwright tests
+        // ============================================
+        window.state = state;
+        window.injectEditorStyles = injectEditorStyles;
+        window.setupEditableElements = setupEditableElements;
+        window.setupToggleableElements = setupToggleableElements;
+        window.setupRepeatableSections = setupRepeatableSections;
+        window.buildElementRefs = buildElementRefs;
+        window.getEditedContent = getEditedContent;
+        window.markUnsaved = markUnsaved;
+        window.showToast = showToast;
+        window.setViewportMode = setViewportMode;
     </script>
 </body>
 </html>
