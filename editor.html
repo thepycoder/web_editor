@@ -420,9 +420,6 @@
         <button class="btn" id="btn-open">
             <span>📂</span> Open Project
         </button>
-        <button class="btn" id="btn-download-netlify" disabled title="Download current site from Netlify">
-            <span>☁️</span> Download from Netlify
-        </button>
         <span class="file-name" id="file-name" style="display: none;"></span>
         <span class="unsaved-indicator" id="unsaved-indicator" style="display: none;">● Unsaved</span>
         <div class="viewport-buttons" id="viewport-buttons">
@@ -437,13 +434,16 @@
             </button>
         </div>
         <button class="btn" id="btn-save" disabled>
-            <span>💾</span> Save
+            <span>💾</span> Opslaan op Laptop
         </button>
         <button class="btn btn-primary" id="btn-settings">
-            <span>⚙️</span> Deploy Settings
+            <span>⚙️</span> Instellingen
+        </button>
+        <button class="btn" id="btn-download-netlify" disabled title="Download current site from Netlify">
+            <span>☁️</span> Website -> Laptop
         </button>
         <button class="btn btn-success" id="btn-deploy-netlify" disabled>
-            <span>🚀</span> Deploy to Netlify
+            <span>🚀</span> Laptop -> Website
         </button>
     </header>
 
@@ -451,7 +451,7 @@
         <div class="preview-container">
             <div class="empty-state" id="empty-state">
                 <div class="empty-state-icon">📁</div>
-                <h2>No project open</h2>
+                <h2>Nog geen project open</h2>
                 <p>Open a project folder containing an <code>index.html</code> file to start editing. Images will be stored in an <code>assets/</code> subfolder. Use <code>data-editable</code>, <code>data-editable-image</code>, <code>data-editable-link</code>, <code>data-toggleable</code>, or <code>data-repeatable</code> attributes to mark editable regions.</p>
                 <button class="btn btn-primary" id="btn-open-empty">
                     <span>📂</span> Open Project Folder
