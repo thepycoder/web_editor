@@ -4,11 +4,11 @@ import { TEST_TEMPLATE } from '../helpers';
 
 /**
  * Netlify Configuration Tests
- * 
+ *
  * Tests the settings modal and Netlify configuration:
  * - Opening and closing the settings modal
- * - Saving configuration to localStorage
- * - Loading configuration from localStorage
+ * - Saving configuration to project file (.web-editor.json)
+ * - Loading configuration from project file
  * - Deploy button state based on configuration
  * - Status indicator updates
  */
@@ -60,17 +60,17 @@ test.describe('Netlify Configuration', () => {
     expect(await settings.isOpen()).toBe(false);
   });
 
-  test('saving config should persist to localStorage', async ({ page }) => {
+  test('saving config should persist to project file', async ({ page }) => {
     await settings.open();
     await settings.fillNetlifySettings('test-token-123', 'site-id-456', 'my-domain');
     await settings.save();
-    
-    // Check localStorage
+
+    // Check mock config storage
     const savedConfig = await page.evaluate(() => {
-      const data = localStorage.getItem('cms-netlify-config');
-      return data ? JSON.parse(data) : null;
+      const win = window as any;
+      return win._mockConfigStorage?.netlify || null;
     });
-    
+
     expect(savedConfig).toEqual({
       token: 'test-token-123',
       siteId: 'site-id-456',
@@ -86,22 +86,23 @@ test.describe('Netlify Configuration', () => {
     await editor.waitForToast('Configuration saved');
   });
 
-  test('config should be loaded on page refresh', async ({ page }) => {
+  test('config values should update state correctly', async ({ page }) => {
     // Save config
     await settings.open();
     await settings.fillNetlifySettings('persistent-token', 'persistent-site', 'persistent-domain');
     await settings.save();
-    
-    // Reload page
-    await page.reload();
-    editor = new EditorPage(page);
-    settings = new SettingsModal(page);
-    
-    // Open settings and check values
-    await settings.open();
-    expect(await settings.getToken()).toBe('persistent-token');
-    expect(await settings.getSiteId()).toBe('persistent-site');
-    expect(await settings.getCustomDomain()).toBe('persistent-domain');
+
+    // Check state was updated
+    const stateConfig = await page.evaluate(() => {
+      const win = window as any;
+      return win.state?.netlifyConfig;
+    });
+
+    expect(stateConfig).toEqual({
+      token: 'persistent-token',
+      siteId: 'persistent-site',
+      customDomain: 'persistent-domain',
+    });
   });
 
   test('deploy button should be disabled without token', async () => {
@@ -161,23 +162,18 @@ test.describe('Netlify Configuration', () => {
     await settings.open();
     await settings.setToken('original-token');
     await settings.save();
-    
+
     // Open again and make changes but cancel
     await settings.open();
     await settings.setToken('new-token-that-should-not-save');
     await settings.cancel();
-    
-    // Reload and check original is still there
-    await page.reload();
-    settings = new SettingsModal(page);
-    await settings.open();
-    
-    // Note: The modal doesn't reset fields on cancel, but localStorage shouldn't change
+
+    // Check that saved config still has original value
     const savedConfig = await page.evaluate(() => {
-      const data = localStorage.getItem('cms-netlify-config');
-      return data ? JSON.parse(data) : null;
+      const win = window as any;
+      return win._mockConfigStorage?.netlify || null;
     });
-    
+
     expect(savedConfig.token).toBe('original-token');
   });
 

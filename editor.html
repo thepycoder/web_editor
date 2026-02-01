@@ -665,6 +665,26 @@
         }
 
         // ============================================
+        // Project Config File (.web-editor.json)
+        // ============================================
+        async function loadProjectConfig(dirHandle) {
+            try {
+                const fileHandle = await dirHandle.getFileHandle('.web-editor.json');
+                const file = await fileHandle.getFile();
+                return JSON.parse(await file.text());
+            } catch {
+                return {};
+            }
+        }
+
+        async function saveProjectConfig(dirHandle, config) {
+            const fileHandle = await dirHandle.getFileHandle('.web-editor.json', { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(JSON.stringify(config, null, 2));
+            await writable.close();
+        }
+
+        // ============================================
         // Toast Notifications
         // ============================================
         function showToast(message, type = 'info') {
@@ -1336,26 +1356,15 @@
         // ============================================
         // Netlify Configuration
         // ============================================
-        function loadNetlifyConfig() {
-            const saved = localStorage.getItem('cms-netlify-config');
-            if (saved) {
-                state.netlifyConfig = JSON.parse(saved);
-                elements.netlifyToken.value = state.netlifyConfig.token || '';
-                elements.netlifySiteId.value = state.netlifyConfig.siteId || '';
-                elements.netlifyCustomDomain.value = state.netlifyConfig.customDomain || '';
-                elements.projectFolder.value = state.netlifyConfig.folderName || '';
-            }
-            updateNetlifyStatus();
-        }
-
-        function saveNetlifyConfig() {
+        async function saveNetlifyConfig() {
             state.netlifyConfig = {
-                ...state.netlifyConfig,
                 token: elements.netlifyToken.value,
                 siteId: elements.netlifySiteId.value,
                 customDomain: elements.netlifyCustomDomain.value,
             };
-            localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
+            if (state.dirHandle) {
+                await saveProjectConfig(state.dirHandle, { netlify: state.netlifyConfig });
+            }
             updateNetlifyStatus();
         }
 
@@ -1365,11 +1374,6 @@
 
                 // Save the handle to IndexedDB
                 await saveDirectoryHandle(dirHandle);
-
-                // Update config with folder name
-                state.netlifyConfig = state.netlifyConfig || {};
-                state.netlifyConfig.folderName = dirHandle.name;
-                localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
 
                 // Update UI
                 elements.projectFolder.value = dirHandle.name;
@@ -1387,6 +1391,29 @@
 
         async function openProjectFromHandle(dirHandle) {
             try {
+                // Load project config from .web-editor.json
+                const config = await loadProjectConfig(dirHandle);
+                state.netlifyConfig = config.netlify || {};
+
+                // Migration: if file config is empty but localStorage has config, migrate it
+                const oldConfig = localStorage.getItem('cms-netlify-config');
+                if (oldConfig && !state.netlifyConfig.token) {
+                    const parsed = JSON.parse(oldConfig);
+                    state.netlifyConfig = {
+                        token: parsed.token || '',
+                        siteId: parsed.siteId || '',
+                        customDomain: parsed.customDomain || '',
+                    };
+                    await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
+                    localStorage.removeItem('cms-netlify-config');
+                }
+
+                elements.netlifyToken.value = state.netlifyConfig.token || '';
+                elements.netlifySiteId.value = state.netlifyConfig.siteId || '';
+                elements.netlifyCustomDomain.value = state.netlifyConfig.customDomain || '';
+                elements.projectFolder.value = dirHandle.name;
+                updateNetlifyStatus();
+
                 // Check for index.html
                 let fileHandle;
                 try {
@@ -1467,11 +1494,7 @@
                 console.log('Auto-open failed:', err.message);
                 // Permission denied or handle invalid - clear it
                 await clearDirectoryHandle();
-                if (state.netlifyConfig) {
-                    state.netlifyConfig.folderName = '';
-                    elements.projectFolder.value = '';
-                    localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
-                }
+                elements.projectFolder.value = '';
             }
         }
 
@@ -1536,7 +1559,7 @@
                     // Save the site ID for future deploys
                     state.netlifyConfig.siteId = siteId;
                     elements.netlifySiteId.value = siteId;
-                    localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
+                    await saveProjectConfig(state.dirHandle, { netlify: state.netlifyConfig });
                     updateNetlifyStatus();
                     
                     showToast(`Created new site: ${siteUrl}`, 'info');
@@ -1731,9 +1754,7 @@
                     showToast('Select a folder to save the project...', 'info');
                     dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                     await saveDirectoryHandle(dirHandle);
-                    state.netlifyConfig.folderName = dirHandle.name;
                     elements.projectFolder.value = dirHandle.name;
-                    localStorage.setItem('cms-netlify-config', JSON.stringify(state.netlifyConfig));
                 } else {
                     // Request permission for existing handle
                     const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
@@ -1940,8 +1961,8 @@
         elements.settingsCancel.addEventListener('click', () => {
             elements.settingsModal.classList.remove('active');
         });
-        elements.settingsSave.addEventListener('click', () => {
-            saveNetlifyConfig();
+        elements.settingsSave.addEventListener('click', async () => {
+            await saveNetlifyConfig();
             elements.settingsModal.classList.remove('active');
             showToast('Configuration saved', 'success');
         });
@@ -2005,7 +2026,7 @@
         // ============================================
         // Initialize
         // ============================================
-        loadNetlifyConfig();
+        updateNetlifyStatus();
         tryAutoOpenProject();
 
         // ============================================
@@ -2027,6 +2048,8 @@
         window.loadDirectoryHandle = loadDirectoryHandle;
         window.saveDirectoryHandle = saveDirectoryHandle;
         window.clearDirectoryHandle = clearDirectoryHandle;
+        window.loadProjectConfig = loadProjectConfig;
+        window.saveProjectConfig = saveProjectConfig;
         window.openProjectFromHandle = openProjectFromHandle;
         window.downloadFromNetlify = downloadFromNetlify;
     </script>

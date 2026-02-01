@@ -65,22 +65,14 @@ test.describe('Netlify Download & Sync', () => {
     await expect(settings.projectFolderInput).toHaveAttribute('readonly', '');
   });
 
-  test('project folder name should persist in localStorage', async ({ page }) => {
-    // Simulate setting a folder via JavaScript (since we can't use file picker in tests)
-    await page.evaluate(() => {
-      const config = {
-        token: 'test-token',
-        siteId: 'test-site',
-        folderName: 'my-project-folder'
-      };
-      localStorage.setItem('cms-netlify-config', JSON.stringify(config));
-    });
+  test('project folder name should display from dirHandle', async () => {
+    // Load a project first (this sets up dirHandle and project folder UI)
+    await editor.injectTestContent(TEST_TEMPLATE);
 
-    await page.reload();
-    settings = new SettingsModal(page);
     await settings.open();
 
-    expect(await settings.getProjectFolder()).toBe('my-project-folder');
+    // The folder name should match the mock dirHandle name set by injectTestContent
+    expect(await settings.getProjectFolder()).toBe('Test Project');
   });
 
   test('download button state should update after config change', async () => {

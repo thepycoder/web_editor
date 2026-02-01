@@ -98,16 +98,25 @@ export class EditorPage {
       win.state.hasUnsavedChanges = false;
       win.state.assetRefs = new Map();
       win.state.pendingDeletes = new Set();
+      win.state.netlifyConfig = win.state.netlifyConfig || {};
+
+      // Mock config file storage in memory for testing
+      win._mockConfigStorage = win._mockConfigStorage || {};
+      win.loadProjectConfig = async () => win._mockConfigStorage;
+      win.saveProjectConfig = async (dirHandle: any, config: any) => {
+        win._mockConfigStorage = config;
+      };
       
       // Update UI elements
       const fileNameEl = document.getElementById('file-name')!;
       fileNameEl.textContent = 'Test Project';
       fileNameEl.style.display = 'block';
-      
+
       document.getElementById('empty-state')!.style.display = 'none';
       document.getElementById('preview-wrapper')!.style.display = 'block';
       document.getElementById('btn-save')!.removeAttribute('disabled');
       document.getElementById('unsaved-indicator')!.style.display = 'none';
+      (document.getElementById('project-folder') as HTMLInputElement).value = 'Test Project';
       
       // Get the iframe and write content
       const frame = document.getElementById('preview-frame') as HTMLIFrameElement;
