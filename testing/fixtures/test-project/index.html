@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Project Template</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 { margin-bottom: 16px; color: #1a1a1a; }
+        h2 { margin: 32px 0 16px; color: #2a2a2a; }
+        p { margin-bottom: 16px; }
+        .banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .banner-hidden {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0;
+            background: #fafafa;
+        }
+        .card h3 { margin-bottom: 8px; color: #333; }
+        .card p { margin-bottom: 12px; color: #666; }
+        .card a { color: #667eea; text-decoration: none; }
+        .card a:hover { text-decoration: underline; }
+        nav { margin: 20px 0; display: flex; gap: 20px; }
+        nav a { color: #667eea; text-decoration: none; }
+        nav a:hover { text-decoration: underline; }
+        img { 
+            max-width: 100%; 
+            height: auto; 
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Editable hero section -->
+    <h1 data-editable id="hero-title">Welcome to Our Amazing Product</h1>
+    <p data-editable id="hero-description">
+        This is a sample template demonstrating all the editable features 
+        of the ProjectWhy CMS. Click on any highlighted element to edit it.
+    </p>
+
+    <!-- Editable image -->
+    <img data-editable-image id="hero-image"
+         src="./assets/placeholder.png"
+         alt="Hero Image"
+         width="600"
+         height="300">
+
+    <!-- Navigation with editable links -->
+    <nav>
+        <a data-editable-link id="nav-home" href="/">Home</a>
+        <a data-editable-link id="nav-features" href="#features">Features</a>
+        <a data-editable-link id="nav-pricing" href="#pricing">Pricing</a>
+        <a data-editable-link id="nav-contact" href="mailto:hello@example.com">Contact</a>
+    </nav>
+
+    <!-- Toggleable announcement banner (visible) -->
+    <div data-toggleable id="announcement-visible" class="banner">
+        <strong>📢 Announcement:</strong>
+        <span data-editable id="announcement-text">
+            We just launched a new feature! Check it out.
+        </span>
+    </div>
+
+    <!-- Toggleable promo banner (hidden by default) -->
+    <div data-toggleable id="promo-hidden" class="banner banner-hidden" style="display: none;">
+        <strong>🎉 Special Offer:</strong>
+        <span data-editable>
+            Get 50% off your first month with code SAVE50!
+        </span>
+    </div>
+
+    <!-- Features section with repeatable cards -->
+    <h2 data-editable id="features-title">Features</h2>
+    <p data-editable id="features-intro">
+        Discover what makes our product stand out from the competition.
+    </p>
+
+    <div data-repeatable id="features-container">
+        <div class="card" id="feature-1">
+            <h3 data-editable>⚡ Lightning Fast</h3>
+            <p data-editable>
+                Our optimized engine delivers results in milliseconds, 
+                keeping your workflow smooth and efficient.
+            </p>
+            <a data-editable-link href="#speed">Learn about performance →</a>
+        </div>
+        
+        <div class="card" id="feature-2">
+            <h3 data-editable>🔒 Secure by Default</h3>
+            <p data-editable>
+                Enterprise-grade security with end-to-end encryption 
+                and compliance certifications.
+            </p>
+            <a data-editable-link href="#security">View security details →</a>
+        </div>
+        
+        <div class="card" id="feature-3">
+            <h3 data-editable>🔄 Easy Integration</h3>
+            <p data-editable>
+                Connect with your favorite tools through our extensive 
+                API and pre-built integrations.
+            </p>
+            <a data-editable-link href="#integrations">Browse integrations →</a>
+        </div>
+    </div>
+
+    <!-- Testimonials section -->
+    <h2 data-editable id="testimonials-title">What Our Customers Say</h2>
+    
+    <div data-repeatable id="testimonials-container">
+        <div class="card" id="testimonial-1">
+            <p data-editable>
+                "This product transformed our workflow. We're now 3x more 
+                productive than before!"
+            </p>
+            <p data-editable><strong>— Jane Doe, CEO at TechCorp</strong></p>
+        </div>
+    </div>
+
+    <!-- Footer with editable content -->
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+        <p data-editable id="footer-text">
+            © 2024 Your Company. All rights reserved.
+        </p>
+        <nav>
+            <a data-editable-link id="footer-privacy" href="/privacy">Privacy Policy</a>
+            <a data-editable-link id="footer-terms" href="/terms">Terms of Service</a>
+        </nav>
+    </footer>
+</body>
+</html>
+
