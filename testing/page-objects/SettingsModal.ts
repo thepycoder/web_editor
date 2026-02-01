@@ -9,6 +9,8 @@ import { Page, Locator } from '@playwright/test';
 export class SettingsModal {
   readonly page: Page;
   readonly modal: Locator;
+  readonly projectFolderInput: Locator;
+  readonly selectFolderButton: Locator;
   readonly tokenInput: Locator;
   readonly siteIdInput: Locator;
   readonly customDomainInput: Locator;
@@ -19,6 +21,8 @@ export class SettingsModal {
   constructor(page: Page) {
     this.page = page;
     this.modal = page.locator('#settings-modal');
+    this.projectFolderInput = page.locator('#project-folder');
+    this.selectFolderButton = page.locator('#btn-select-folder');
     this.tokenInput = page.locator('#netlify-token');
     this.siteIdInput = page.locator('#netlify-siteId');
     this.customDomainInput = page.locator('#netlify-customDomain');
@@ -61,6 +65,13 @@ export class SettingsModal {
   async open() {
     await this.page.locator('#btn-settings').click();
     await this.waitForOpen();
+  }
+
+  /**
+   * Gets the current project folder name
+   */
+  async getProjectFolder(): Promise<string> {
+    return this.projectFolderInput.inputValue();
   }
 
   /**

@@ -20,6 +20,7 @@ export class EditorPage {
   
   // Toolbar elements
   readonly btnOpen: Locator;
+  readonly btnDownloadNetlify: Locator;
   readonly btnOpenEmpty: Locator;
   readonly btnSave: Locator;
   readonly btnSettings: Locator;
@@ -46,6 +47,7 @@ export class EditorPage {
     
     // Toolbar
     this.btnOpen = page.locator('#btn-open');
+    this.btnDownloadNetlify = page.locator('#btn-download-netlify');
     this.btnOpenEmpty = page.locator('#btn-open-empty');
     this.btnSave = page.locator('#btn-save');
     this.btnSettings = page.locator('#btn-settings');
@@ -171,6 +173,13 @@ export class EditorPage {
    */
   async isDeployEnabled(): Promise<boolean> {
     return !(await this.btnDeployNetlify.isDisabled());
+  }
+
+  /**
+   * Checks if download button is enabled
+   */
+  async isDownloadEnabled(): Promise<boolean> {
+    return !(await this.btnDownloadNetlify.isDisabled());
   }
 
   /**

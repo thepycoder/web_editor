@@ -34,7 +34,9 @@ test.describe('Netlify Configuration', () => {
 
   test('settings modal should have all input fields', async () => {
     await settings.open();
-    
+
+    await expect(settings.projectFolderInput).toBeVisible();
+    await expect(settings.selectFolderButton).toBeVisible();
     await expect(settings.tokenInput).toBeVisible();
     await expect(settings.siteIdInput).toBeVisible();
     await expect(settings.customDomainInput).toBeVisible();

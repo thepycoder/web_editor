@@ -1,4 +1,3 @@
-- [ ] Fix text overflowing in rotonde template. When user edits using editor to larger string, it should get a smaller font size, but instead overflows or is weirdly broken up.
+- [x] Fix text overflowing in rotonde template. When user edits using editor to larger string, it should get a smaller font size, but instead overflows or is weirdly broken up.
 - [ ] Sync static site from netlify to local, so one can start editing from production version
-- [ ] Responsive simulation in editor (rescaling the iframe)
-- [ ] Add responsiveness views in the editor: 3 view modes (full monitor, tablet, phone) with buttons to switch between them
+- [x] Add responsiveness views in the editor: 3 view modes (full monitor, tablet, phone) with buttons to switch between them
