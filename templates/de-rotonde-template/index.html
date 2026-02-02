@@ -694,8 +694,8 @@
       </a>
       <nav class="nav">
         <ul class="nav__list" data-repeatable="">
-          <li><a href="#" class="nav__link nav__link" data-editable-link="">Home</a></li>
-          <li><a href="#aankondigingen" class="nav__link" data-editable-link="">Nieuws</a></li>
+          <li><a href="#" class="nav__link nav__link" data-editable-link="">Home</a></li><li><a href="#nieuws" class="nav__link nav__link" data-editable-link="">nieuws</a></li>
+          
           <li><a href="#huisreglement" class="nav__link" data-editable-link="">Praktisch</a></li>
           <li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
           <li><a href="#contact" class="nav__link" data-editable-link="">Contact</a></li>
@@ -725,14 +725,14 @@
     <section class="hero">
       <div class="hero__card">
         <h1 class="hero__title" data-editable="">Huisartsenpraktijk De Rotonde</h1>
-        <p class="hero__tagline" data-editable="">Uw gezondheid, onze zorg</p>
+        <p class="hero__tagline" data-editable=""><br></p>
         <!-- Dynamic Opening Hours Widget -->
         <div class="opening-status" id="openingStatusWidget">
           <div class="status-header">
-            <div class="status-dot" id="statusDot"></div>
+            <div class="status-dot is-closed" id="statusDot"></div>
             <div class="status-text-content">
-              <div class="status-title" id="statusTitle">Even geduld...</div>
-              <div class="status-subtitle" id="statusSubtitle"></div>
+              <div class="status-title" id="statusTitle" style="color: var(--color-text);">Momenteel gesloten</div>
+              <div class="status-subtitle" id="statusSubtitle">Terug bereikbaar vanaf morgen 8u</div>
             </div>
           </div>
           <div class="timeline-wrapper">
@@ -742,7 +742,7 @@
                 <div class="timeline-block" id="block1" style="left: 7.69%; width: 30.77%;"></div>
                 <!-- 15:00 (8/13 ~ 61.5%) to 19:00 (12/13 ~ 92.3%). Width ~ 30.8% -->
                 <div class="timeline-block" id="block2" style="left: 61.54%; width: 30.77%;"></div>
-                <div class="timeline-marker" id="timeMarker" style="display: none;"></div>
+                <div class="timeline-marker" id="timeMarker" style="display: none; left: 100%;"></div>
              </div>
              <div class="timeline-labels">
                 <!-- Labels positioned at 8:00 (7.7%), 12:00 (38.5%), 15:00 (61.5%), 19:00 (92.3%) of 7-20 scale -->
@@ -754,35 +754,35 @@
           </div>
         </div>
         <div class="hero__actions">
-          <a href="#afspraak" class="btn btn--primary btn--large" data-editable="">Afspraak maken</a>
+          <a href="#afspraak" class="btn btn--primary btn--large" data-editable="">Online agenda</a>
           <a href="tel:09/348.91.45" class="btn btn--secondary btn--large" data-editable="">📞 09/348.91.45</a>
         </div>
       </div>
       <div class="hero__image">
-        <img data-editable-image="" src="./assets/DeRotonde-32-cropped.jpg" alt="Team Huisartsenpraktijk De Rotonde in de tuin" width="800" height="600">
+        <img data-editable-image="" src="./assets/derotonde-32-cropped.jpg" alt="Team Huisartsenpraktijk De Rotonde in de tuin" width="800" height="600">
       </div>
     </section>
 
     <!-- Announcements Section -->
     <section class="announcements section" id="aankondigingen">
       <div class="container">
-        <h2 class="section-title" data-editable="">Aankondigingen</h2>
+        <h2 class="section-title" data-editable="">Nieuws</h2>
         <div class="announcements__grid" data-repeatable="">
           <div class="announcement-card">
             <div class="announcement-card__date" data-editable="">Februari 2026</div>
-            <h3 class="announcement-card__title" data-editable="">Griepvaccinatie</h3>
-            <p class="announcement-card__text" data-editable="">De griepvaccinaties voor dit seizoen zijn beschikbaar. Contacteer ons voor een afspraak.</p>
+            <h3 class="announcement-card__title" data-editable="">Verlof</h3>
+            <p class="announcement-card__text" data-editable="">Dr. Dries Taelman zal afwezig zijn van 5 tem 6 februari 2026.</p>
           </div>
           <div class="announcement-card">
             <div class="announcement-card__date" data-editable="">Januari 2026</div>
-            <h3 class="announcement-card__title" data-editable="">Nieuwe collega</h3>
-            <p class="announcement-card__text" data-editable="">We verwelkomen Kelly Snoeck als psycholoog in onze praktijk.</p>
+            <h3 class="announcement-card__title" data-editable="">Infectieseizoen</h3>
+            <p class="announcement-card__text" data-editable="">Momenteel geld code oranje voor luchtweginfecties. Gelieve een mondmasker te dragen indien u luchtwegklachten of koorts heeft.&nbsp;</p>
+          </div><div class="announcement-card">
+            <div class="announcement-card__date" data-editable=""><br></div>
+            <h3 class="announcement-card__title" data-editable="">Patiëntenstop</h3>
+            <p class="announcement-card__text" data-editable="">Om de kwaliteit van zorg te garanderen, zijn wij genoodzaakt om voorlopig een patiëntenstop in te voeren.&nbsp;</p>
           </div>
-          <div class="announcement-card">
-            <div class="announcement-card__date" data-editable="">Doorlopend</div>
-            <h3 class="announcement-card__title" data-editable="">Online afspraken</h3>
-            <p class="announcement-card__text" data-editable="">U kunt nu ook online een afspraak maken via onze website.</p>
-          </div>
+          
         </div>
       </div>
     </section>
@@ -797,15 +797,18 @@
             <ul class="house-rules__list" data-repeatable="">
               <li class="house-rules__item">
                 <span class="house-rules__bullet"></span>
-                <span data-editable="">1 afspraak per persoon: 2 kinderen en jezelf is dus 3 afspraken</span>
+                <span data-editable="">Consultaties enkel op afspraak. Gelieve 1 afspraak per persoon te maken.</span>
               </li>
               <li class="house-rules__item">
                 <span class="house-rules__bullet"></span>
-                <span data-editable="">ID kaart, ISI+ kaart of kids-ID altijd meenemen.</span>
+                <span data-editable="">Breng steeds je ID kaart, ISI+ kaart of kids-ID mee op consultatie.</span>
               </li>
               <li class="house-rules__item">
                 <span class="house-rules__bullet"></span>
-                <span data-editable="">Huisbezoeken moeten steeds telefonisch aangevraagd worden, bij voorkeur voor 10u 's morgens.</span>
+                <span data-editable="">Huisbezoeken moeten steeds telefonisch aangevraagd worden, bij voorkeur voor 10u 's morgens. Deze zijn voorbehouden voor ernstig zieken of immobiele patiënten.</span>
+              </li><li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Gelieve tussen 12u en 15u enkel te bellen voor dringende vragen.</span>
               </li>
             </ul>
           </div>
@@ -814,7 +817,7 @@
             <ul class="house-rules__list" data-repeatable="">
               <li class="house-rules__item">
                 <span class="house-rules__bullet"></span>
-                <span data-editable="">Cash of Bancontact is mogelijk.</span>
+                <span data-editable="">Betalen is mogelijk met Cash of Bancontact.</span>
               </li>
               <li class="house-rules__item">
                 <span class="house-rules__bullet"></span>
@@ -822,7 +825,10 @@
               </li>
               <li class="house-rules__item">
                 <span class="house-rules__bullet"></span>
-                <span data-editable="">Dr. Taelman en Dr. Van Nieuwenhuyze zijn erkend arts voor personeel van de politie en defensie.</span>
+                <span data-editable="">Indien u onverwacht ziek wordt en alle online afspraken reeds volzet zijn, kunt u voor een dringende afspraak altijd telefonisch contact opnemen.</span>
+              </li><li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Dr Dries Taelman en Dr. Jelle Van Nieuwenhuyze zijn ook erkend arts voor personeel van politie en defensie.</span>
               </li>
             </ul>
           </div>
@@ -839,33 +845,33 @@
             <div class="team-card__avatar">
               <img data-editable-image="" src="./assets/dr-dries-taelman.jpg" alt="Dr. Dries Taelman - Huisarts en Sportarts" width="400" height="500" loading="lazy">
             </div>
-            <h3 class="team-card__name" data-editable="">Dr. Dries Taelman</h3>
+            <h3 class="team-card__name" data-editable="">Dries Taelman</h3>
             <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
-            <p class="team-card__bio" data-editable="">Ervaren sportarts met oog voor blessurepreventie en revalidatie. Algemene huisartsgeneeskunde voor het hele gezin.</p>
+            <p class="team-card__bio" data-editable=""><br></p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
               <img data-editable-image="" src="./assets/dr-jelle-van-nieuwenhuyze.jpg" alt="Dr. Jelle Van Nieuwenhuyze - Huisarts en Sportarts" width="400" height="500" loading="lazy">
             </div>
-            <h3 class="team-card__name" data-editable="">Dr. Jelle Van Nieuwenhuyze</h3>
+            <h3 class="team-card__name" data-editable="">Jelle Van Nieuwenhuyze</h3>
             <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
-            <p class="team-card__bio" data-editable="">Gespecialiseerd in sportmedische keuringen en begeleiding van sporters. Brede interesse in eerstelijnszorg.</p>
+            <p class="team-card__bio" data-editable=""><br><div><br></div></p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
               <img data-editable-image="" src="./assets/dr-tine-konings.jpg" alt="Dr. Tine Konings - Huisarts" width="400" height="500" loading="lazy">
             </div>
-            <h3 class="team-card__name" data-editable="">Dr. Tine Konings</h3>
+            <h3 class="team-card__name" data-editable="">Tine Konings</h3>
             <p class="team-card__role" data-editable="">Huisarts</p>
-            <p class="team-card__bio" data-editable="">Bijzondere bekwaamheid in preventieve geneeskunde, kindergeneeskunde en gynaecologische opvolging.</p>
+            <p class="team-card__bio" data-editable=""><br></p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
               <img data-editable-image="" src="./assets/dr-robbe-de-bruyn.jpg" alt="Dr. Robbe De Bruyn - Huisarts" width="400" height="500" loading="lazy">
             </div>
-            <h3 class="team-card__name" data-editable="">Dr. Robbe De Bruyn</h3>
+            <h3 class="team-card__name" data-editable="">Robbe De Bruyn</h3>
             <p class="team-card__role" data-editable="">Huisarts</p>
-            <p class="team-card__bio" data-editable="">Focus op chronische zorg, ouderengeneeskunde en kleine heelkundige ingrepen in de praktijk.</p>
+            <p class="team-card__bio" data-editable=""><br></p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
@@ -873,15 +879,15 @@
             </div>
             <h3 class="team-card__name" data-editable="">Saartje De Maesschalck</h3>
             <p class="team-card__role" data-editable="">Verpleegkundige</p>
-            <p class="team-card__bio" data-editable="">Verpleegkundige taken waaronder bloednamen, wondzorg, vaccinaties en pre-operatieve onderzoeken.</p>
+            <p class="team-card__bio" data-editable="">Verpleegkundige taken waaronder wondzorg, vaccinaties, bloedafnames en pre-operatieve onderzoeken.</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
               <img data-editable-image="" src="./assets/kelly-snoeck.jpg" alt="Kelly Snoeck - Secretariaat" width="400" height="500" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Kelly Snoeck</h3>
-            <p class="team-card__role" data-editable="">PSYCHOLOOG</p>
-            <p class="team-card__bio" data-editable="">Expertise loopbaanontwikkeling, stress- en burn-out begeleiding en leiderschapsontwikkeling.<div><p>Afspraken via: <a href="mailto:kelly@maniola.be">kelly@maniola.be</a></p></div></p>
+            <p class="team-card__role" data-editable="">THERAPEUT</p>
+            <p class="team-card__bio" data-editable="">Expertise loopbaanontwikkeling, stress- en burn-out begeleiding en leiderschapsontwikkeling.</p><div><p>Afspraken via: <a href="mailto:kelly@maniola.be">kelly@maniola.be</a></p></div><p></p>
           </div>
         </div>
       </div>
@@ -913,14 +919,14 @@
               <div class="contact__icon">🕐</div>
               <div class="contact__item-content">
                 <div class="contact__item-label" data-editable="">Openingsuren secretariaat</div>
-                <div class="contact__item-value" data-editable="">'s Morgens: 8u - 12u<br>'s Namiddags: 15u - 19u</div>
+                <div class="contact__item-value" data-editable="">&nbsp;8u - 12u en 15u - 19u</div>
               </div>
             </div>
-            <a href="#afspraak" class="btn btn--primary mt-md" data-editable="">Afspraak maken</a>
+            <a href="#afspraak" class="btn btn--primary mt-md" data-editable="">Online afspraak maken</a>
           </div>
           <div class="contact__map">
             <a href="https://www.google.com/maps/search/?api=1&amp;query=Gentse+Steenweg+143,+9160+Lokeren,+Belgium" target="_blank" rel="noopener noreferrer" title="Bekijk locatie op Google Maps - Gentse Steenweg 143, 9160 Lokeren" class="contact__map-link">
-              <img src="./assets/Screenshot_20260202_144903.png" alt="Locatie Huisartsenpraktijk De Rotonde - Gentse Steenweg 143, 9160 Lokeren" width="600" height="400" loading="lazy">
+              <img src="./assets/map.png" alt="Locatie Huisartsenpraktijk De Rotonde - Gentse Steenweg 143, 9160 Lokeren" width="600" height="400" loading="lazy">
             </a>
             <span class="contact__map-badge">📍 Klik op de kaart om naar Google Maps te gaan</span>
           </div>
@@ -933,8 +939,8 @@
       <div class="container">
         <div class="emergency__inner">
           <h3 class="emergency__title" data-editable="">🚨 Huisartsenwachtdienst</h3>
-          <p class="emergency__text" data-editable="">Op feestdagen, 's nachts en tijdens het weekend kan u voor dringende medische problemen een beroep doen op de huisarts van wacht.</p>
-          <a href="tel:1733" class="emergency__number" data-editable="">Bel naar 1733</a>
+          <p class="emergency__text" data-editable="">Tijdens het weekend, op feestdagen of vanaf 18u 's avonds kan u voor dringende medische problemen een beroep doen op de huisartsenwachtpost.<div><br></div><div>meer info:&nbsp;https://www.huisartsenwachtdienstwaasland.be</div></p>
+          <a href="tel:1733" class="emergency__number" data-editable="">Bel 1733</a>
         </div>
       </div>
     </section>
