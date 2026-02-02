@@ -3,16 +3,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Huisartsenpraktijk De Rotonde in Lokeren - dr. Dries Taelman, dr. Jelle Van Nieuwenhuyze, dr. Tine Konings en dr. Robbe De Bruyn. Moderne huisartsenzorg en sportgeneeskunde. Bel 09/348.91.45">
-  <meta name="theme-color" content="#3d9a7e">
+  <meta name="theme-color" content="#618C96">
   <title>Huisartsenpraktijk De Rotonde</title>
   <style>
     /* CSS Variables */
     :root {
-      --color-primary: #3d9a7e;
-      --color-primary-light: #5fbf9f;
-      --color-primary-dark: #2d7a5e;
-      --color-accent: #e8917a;
-      --color-accent-light: #f0b4a4;
+      --color-primary: #618C96;
+      --color-primary-light: #84aab3;
+      --color-primary-dark: #4a6e78;
+      --color-accent: #BF7A59;
+      --color-accent-light: #d49b80;
       --color-background: #faf9f7;
       --color-background-alt: #f5f3f0;
       --color-surface: #ffffff;
@@ -43,10 +43,10 @@
       --radius-lg: 24px;
       --radius-xl: 32px;
       --radius-full: 9999px;
-      --shadow-sm: 0 2px 8px rgba(61, 154, 126, 0.06);
-      --shadow-md: 0 4px 16px rgba(61, 154, 126, 0.08);
-      --shadow-lg: 0 8px 32px rgba(61, 154, 126, 0.12);
-      --shadow-xl: 0 16px 48px rgba(61, 154, 126, 0.16);
+      --shadow-sm: 0 2px 8px rgba(97, 140, 150, 0.06);
+      --shadow-md: 0 4px 16px rgba(97, 140, 150, 0.08);
+      --shadow-lg: 0 8px 32px rgba(97, 140, 150, 0.12);
+      --shadow-xl: 0 16px 48px rgba(97, 140, 150, 0.16);
       --transition-fast: 150ms ease;
       --transition-normal: 250ms ease;
       --container-max: 1200px;
@@ -54,7 +54,7 @@
 
     /* Reset & Base */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
     body {
       font-family: var(--font-body);
       font-size: var(--font-size-base);
@@ -339,7 +339,7 @@
     }
     .status-dot.is-open {
       background-color: var(--color-primary);
-      box-shadow: 0 0 0 4px rgba(61, 154, 126, 0.2);
+      box-shadow: 0 0 0 4px rgba(97, 140, 150, 0.2);
     }
     .status-dot.is-closed {
       background-color: var(--color-accent);
@@ -451,6 +451,83 @@
       line-height: 1.3;
     }
     .announcement-card__text { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: 0; }
+
+    /* House Rules */
+    .house-rules { padding: var(--space-xl) 0; }
+    .house-rules__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-lg); }
+    @media (min-width: 768px) { .house-rules__grid { grid-template-columns: 1fr 1fr; } }
+
+    .house-rules__column {
+      background: rgba(97, 140, 150, 0.04);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(97, 140, 150, 0.1);
+      transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    }
+    .house-rules__column:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .house-rules__title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-2xl);
+      color: var(--color-text);
+      margin-bottom: var(--space-lg);
+      position: relative;
+    }
+    .house-rules__title::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 3px;
+      background: var(--color-primary);
+      margin-top: var(--space-xs);
+      border-radius: var(--radius-full);
+    }
+
+    .house-rules__list { display: flex; flex-direction: column; gap: var(--space-md); }
+    .house-rules__item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+      font-size: var(--font-size-base);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .house-rules__bullet {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      margin-top: 2px;
+      background-color: rgba(97, 140, 150, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .house-rules__bullet::after {
+      content: '';
+      width: 14px;
+      height: 14px;
+      background-color: var(--color-primary);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center;
+    }
+
+    .house-rules__column--alt {
+      background: rgba(232, 145, 122, 0.04);
+      border-color: rgba(232, 145, 122, 0.1);
+    }
+    .house-rules__column--alt .house-rules__title::after { background: var(--color-accent); }
+    .house-rules__column--alt .house-rules__bullet {
+      background-color: rgba(232, 145, 122, 0.15);
+    }
+    .house-rules__column--alt .house-rules__bullet::after {
+      background-color: var(--color-accent);
+    }
 
     /* Team */
     .team {
@@ -587,7 +664,7 @@
     /* Footer */
     .footer {
       padding: var(--space-xl) 0 var(--space-lg);
-      background: var(--color-text);
+      background: var(--color-accent);
       color: rgba(255, 255, 255, 0.8);
     }
     .footer__inner {
@@ -601,7 +678,7 @@
       .footer__inner { flex-direction: row; justify-content: space-between; text-align: left; }
     }
     .footer__logo { display: flex; align-items: center; gap: var(--space-sm); }
-    .footer__logo img { height: 40px; filter: brightness(0) invert(1); }
+    .footer__logo img { height: 40px; width: auto; filter: brightness(0) invert(1); }
     .footer__logo-text { font-family: var(--font-display); color: white; }
     .footer__text { font-size: var(--font-size-sm); color: rgba(255, 255, 255, 0.85); max-width: 400px; }
 
@@ -612,13 +689,15 @@
 <body>
   <header class="header">
     <div class="header__inner">
-      <a href="/" class="header__logo">
-        <img data-editable-image="" src="./assets/img-1770021133097.webp" alt="Huisartsenpraktijk De Rotonde logo" width="48" height="48">
+      <a href="#" class="header__logo">
+        <img data-editable-image="" src="./assets/logo.webp" alt="Huisartsenpraktijk De Rotonde logo" width="573" height="144">
       </a>
       <nav class="nav">
         <ul class="nav__list" data-repeatable="">
-          <li><a href="/" class="nav__link nav__link--active" data-editable-link="">Home</a></li>
-          <li><a href="#aankondigingen" class="nav__link" data-editable-link="">Nieuws</a></li><li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
+          <li><a href="#" class="nav__link nav__link--active" data-editable-link="">Home</a></li>
+          <li><a href="#aankondigingen" class="nav__link" data-editable-link="">Nieuws</a></li>
+          <li><a href="#huisreglement" class="nav__link" data-editable-link="">Praktisch</a></li>
+          <li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
           <li><a href="#contact" class="nav__link" data-editable-link="">Contact</a></li>
         </ul>
         <a href="#afspraak" class="btn btn--primary" data-editable-link="">Afspraak maken</a>
@@ -631,7 +710,9 @@
     </div>
     <nav class="nav-mobile" id="mobileNav">
       <ul class="nav-mobile__list" data-repeatable="">
-        <li><a href="/" class="nav-mobile__link" data-editable-link="">Home</a></li>
+        <li><a href="#" class="nav-mobile__link" data-editable-link="">Home</a></li>
+        <li><a href="#aankondigingen" class="nav-mobile__link" data-editable-link="">Nieuws</a></li>
+        <li><a href="#huisreglement" class="nav-mobile__link" data-editable-link="">Praktisch</a></li>
         <li><a href="#team" class="nav-mobile__link" data-editable-link="">Team</a></li>
         <li><a href="#contact" class="nav-mobile__link" data-editable-link="">Contact</a></li>
         <li><a href="#afspraak" class="btn btn--primary" style="width: 100%; margin-top: var(--space-sm);" data-editable-link="">Afspraak maken</a></li>
@@ -701,6 +782,49 @@
             <div class="announcement-card__date" data-editable="">Doorlopend</div>
             <h3 class="announcement-card__title" data-editable="">Online afspraken</h3>
             <p class="announcement-card__text" data-editable="">U kunt nu ook online een afspraak maken via onze website.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- House Rules Section -->
+    <section class="house-rules section" id="huisreglement">
+      <div class="container">
+        <h2 class="section-title" data-editable="">Praktisch</h2>
+        <div class="house-rules__grid">
+          <div class="house-rules__column">
+            <h2 class="house-rules__title" data-editable="">Huisreglement</h2>
+            <ul class="house-rules__list" data-repeatable="">
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">1 afspraak per persoon: 2 kinderen en jezelf is dus 3 afspraken</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">ID kaart, ISI+ kaart of kids-ID altijd meenemen.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Huisbezoeken moeten steeds telefonisch aangevraagd worden, bij voorkeur voor 10u 's morgens.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="house-rules__column house-rules__column--alt">
+            <h2 class="house-rules__title" data-editable="">Praktische Info</h2>
+            <ul class="house-rules__list" data-repeatable="">
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Cash of Bancontact is mogelijk.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">We zijn geconventioneerd: we passen de officiële tarieven van het RIZIV/mutualiteiten toe.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Dr. Taelman en Dr. Van Nieuwenhuyze zijn erkend arts voor personeel van de politie en defensie.</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -820,8 +944,7 @@
     <div class="container">
       <div class="footer__inner">
         <div class="footer__logo">
-          <img data-editable-image="" src="./assets/img-1770021146539.webp" alt="Huisartsenpraktijk De Rotonde logo" width="40" height="40" loading="lazy">
-          <span class="footer__logo-text" data-editable="">Huisartsenpraktijk De Rotonde</span>
+          <img data-editable-image="" src="./assets/logo.webp" alt="Huisartsenpraktijk De Rotonde logo" width="573" height="144" loading="lazy">
         </div>
         <p class="footer__text" data-editable="">Huisartsenpraktijk De Rotonde - Medische gegevens worden veilig bewaard.</p>
       </div>
