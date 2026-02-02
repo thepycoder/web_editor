@@ -421,42 +421,36 @@
       white-space: nowrap;
     }
 
-    /* Features */
-    .features { padding: var(--space-3xl) 0; }
-    .features__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-lg); }
-    @media (min-width: 768px) { .features__grid { grid-template-columns: repeat(3, 1fr); } }
-    .feature-card {
+    /* Announcements */
+    .announcements { padding: var(--space-xl) 0; }
+    .announcements__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-sm); }
+    @media (min-width: 600px) { .announcements__grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .announcements__grid { grid-template-columns: repeat(3, 1fr); } }
+    .announcement-card {
       background: var(--color-surface);
-      padding: var(--space-xl);
-      border-radius: var(--radius-lg);
-      text-align: center;
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
       box-shadow: var(--shadow-sm);
-      border: 1px solid var(--color-border);
+      border-left: 3px solid var(--color-primary);
       transition: all var(--transition-normal);
     }
-    .feature-card:hover {
-      transform: translateY(-8px);
-      box-shadow: var(--shadow-lg);
-      border-color: var(--color-primary-light);
+    .announcement-card:hover {
+      box-shadow: var(--shadow-md);
+      border-left-color: var(--color-accent);
     }
-    .feature-card__icon {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto var(--space-md);
-      background: linear-gradient(135deg, var(--color-background-alt), var(--color-background));
-      border-radius: var(--radius-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-    }
-    .feature-card__title {
-      font-family: var(--font-display);
-      font-size: var(--font-size-xl);
-      color: var(--color-primary);
+    .announcement-card__date {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
       margin-bottom: var(--space-xs);
     }
-    .feature-card__text { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+    .announcement-card__title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+      color: var(--color-text);
+      margin-bottom: var(--space-xs);
+      line-height: 1.3;
+    }
+    .announcement-card__text { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: 0; }
 
     /* Team */
     .team {
@@ -624,7 +618,7 @@
       <nav class="nav">
         <ul class="nav__list" data-repeatable="">
           <li><a href="/" class="nav__link nav__link--active" data-editable-link="">Home</a></li>
-          <li><a href="#features" class="nav__link" data-editable-link="">Aanpak</a></li><li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
+          <li><a href="#aankondigingen" class="nav__link" data-editable-link="">Nieuws</a></li><li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
           <li><a href="#contact" class="nav__link" data-editable-link="">Contact</a></li>
         </ul>
         <a href="#afspraak" class="btn btn--primary" data-editable-link="">Afspraak maken</a>
@@ -688,25 +682,25 @@
       </div>
     </section>
 
-    <!-- Features Section -->
-    <section class="features section" id="features">
+    <!-- Announcements Section -->
+    <section class="announcements section" id="aankondigingen">
       <div class="container">
-        <h2 class="section-title" data-editable="">Onze Aanpak</h2>
-        <div class="features__grid" data-repeatable="">
-          <div class="feature-card">
-            <div class="feature-card__icon" data-editable="">🏥</div>
-            <h3 class="feature-card__title" data-editable="">Moderne Zorg</h3>
-            <p class="feature-card__text" data-editable="">Frequente bijscholingen zorgen ervoor dat we op de hoogte blijven van de meest recente richtlijnen en behandelmethodes.</p>
+        <h2 class="section-title" data-editable="">Aankondigingen</h2>
+        <div class="announcements__grid" data-repeatable="">
+          <div class="announcement-card">
+            <div class="announcement-card__date" data-editable="">Februari 2026</div>
+            <h3 class="announcement-card__title" data-editable="">Griepvaccinatie</h3>
+            <p class="announcement-card__text" data-editable="">De griepvaccinaties voor dit seizoen zijn beschikbaar. Contacteer ons voor een afspraak.</p>
           </div>
-          <div class="feature-card">
-            <div class="feature-card__icon" data-editable="">👥</div>
-            <h3 class="feature-card__title" data-editable="">Teamwerk</h3>
-            <p class="feature-card__text" data-editable="">We werken als een team met hetzelfde elektronische dossier voor continuïteit in de zorgverlening.</p>
+          <div class="announcement-card">
+            <div class="announcement-card__date" data-editable="">Januari 2026</div>
+            <h3 class="announcement-card__title" data-editable="">Nieuwe collega</h3>
+            <p class="announcement-card__text" data-editable="">We verwelkomen Kelly Snoeck als psycholoog in onze praktijk.</p>
           </div>
-          <div class="feature-card">
-            <div class="feature-card__icon" data-editable="">🏃</div>
-            <h3 class="feature-card__title" data-editable="">Sportgeneeskunde</h3>
-            <p class="feature-card__text" data-editable="">Enthousiaste huisartsen met een passie voor sport- en huisartsengeneeskunde.</p>
+          <div class="announcement-card">
+            <div class="announcement-card__date" data-editable="">Doorlopend</div>
+            <h3 class="announcement-card__title" data-editable="">Online afspraken</h3>
+            <p class="announcement-card__text" data-editable="">U kunt nu ook online een afspraak maken via onze website.</p>
           </div>
         </div>
       </div>
