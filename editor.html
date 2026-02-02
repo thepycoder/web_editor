@@ -760,10 +760,36 @@
         // Collect referenced assets from the current document
         function getReferencedAssets(doc) {
             const referenced = new Set();
+            
+            // 1. Check editable images (managed by CMS)
             doc.querySelectorAll('[data-editable-image]').forEach(img => {
                 const filename = img.dataset.assetFilename;
                 if (filename) referenced.add(filename);
             });
+
+            // 2. Check for any other usage of known assets (safety net)
+            // This prevents deleting assets that are used in standard <img> tags 
+            // but not marked as editable, or used in other ways.
+            if (state.assetBlobUrls && state.assetBlobUrls.size > 0) {
+                const htmlContent = doc.documentElement.outerHTML;
+                
+                for (const [filename, blobUrl] of state.assetBlobUrls) {
+                    if (referenced.has(filename)) continue;
+
+                    // Check if the blob URL is present (active preview usage)
+                    if (htmlContent.includes(blobUrl)) {
+                        referenced.add(filename);
+                        continue;
+                    }
+
+                    // Check if the filename itself is present (e.g. in a script or unreplaced path)
+                    // We check for 'assets/filename' to be reasonably specific
+                    if (htmlContent.includes(filename)) {
+                        referenced.add(filename);
+                    }
+                }
+            }
+
             return referenced;
         }
 
@@ -1202,8 +1228,10 @@
             
             try {
                 // Generate new filename with timestamp to avoid conflicts
+                // Sanitize filename: lowercase and remove special chars to avoid Netlify issues
                 const ext = file.name.split('.').pop().toLowerCase();
-                const newFilename = `img-${Date.now()}.${ext}`;
+                const name = file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9]/g, '-');
+                const newFilename = `${name}-${Date.now()}.${ext}`;
                 
                 // Write new file to assets folder
                 const newFileHandle = await state.project.assetsHandle.getFileHandle(newFilename, { create: true });
