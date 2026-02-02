@@ -221,7 +221,7 @@
       border-color: var(--color-primary);
     }
     .btn--secondary:hover { background: var(--color-primary); color: white; }
-    .btn--large { padding: var(--space-md) var(--space-xl); font-size: var(--font-size-lg); }
+    .btn--large { padding: var(--space-md) var(--space-lg); font-size: var(--font-size-lg); }
 
     /* Hero */
     .hero {
@@ -296,7 +296,130 @@
       color: var(--color-text-muted);
       margin-bottom: var(--space-lg);
     }
-    .hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+    .hero__actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .hero__actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+    @media (min-width: 600px) {
+      .hero__actions {
+        flex-direction: row;
+      }
+      .hero__actions .btn {
+        width: auto;
+      }
+    }
+
+    /* Dynamic Opening Hours */
+    .opening-status {
+      margin-bottom: var(--space-lg);
+      padding: var(--space-md);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+    }
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-sm);
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: var(--color-text-muted);
+      flex-shrink: 0;
+      transition: all var(--transition-normal);
+    }
+    .status-dot.is-open {
+      background-color: var(--color-primary);
+      box-shadow: 0 0 0 4px rgba(61, 154, 126, 0.2);
+    }
+    .status-dot.is-closed {
+      background-color: var(--color-accent);
+    }
+    
+    .status-text-content {
+      line-height: 1.3;
+    }
+    .status-title {
+      font-weight: 700;
+      color: var(--color-text);
+      font-size: var(--font-size-lg);
+    }
+    .status-subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+    
+    .timeline-wrapper {
+      margin-top: var(--space-sm);
+      padding: 0 var(--space-xs);
+    }
+    .timeline-container {
+      position: relative;
+      height: 16px;
+      background: var(--color-background-alt);
+      border-radius: var(--radius-full);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+      overflow: visible;
+    }
+    /* The blocks for openings */
+    .timeline-block {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      background-color: var(--color-primary-light);
+      opacity: 0.3;
+      border-radius: var(--radius-full);
+    }
+    .timeline-block.is-active-range {
+        opacity: 1;
+        background-color: var(--color-primary);
+    }
+
+    .timeline-marker {
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      width: 4px;
+      background-color: var(--color-accent);
+      border-radius: var(--radius-full);
+      z-index: 2;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      pointer-events: none;
+    }
+    .timeline-marker::after {
+        content: '';
+        position: absolute;
+        top: -4px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 4px solid var(--color-accent);
+    }
+
+    .timeline-labels {
+      position: relative;
+      height: 20px;
+      margin-top: 6px;
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      font-family: monospace;
+      font-weight: 600;
+    }
+    .timeline-labels span {
+      position: absolute;
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
 
     /* Features */
     .features { padding: var(--space-3xl) 0; }
@@ -528,7 +651,33 @@
       <div class="hero__card">
         <h1 class="hero__title" data-editable="">Huisartsenpraktijk De Rotonde</h1>
         <p class="hero__tagline" data-editable="">Uw gezondheid, onze zorg</p>
-        <p class="hero__description" data-editable="">Bij huisartsenpraktijk De Rotonde te Lokeren kan u terecht met al uw gezondheidsgerelateerde vragen en problemen. We engageren ons om een laagdrempelig eerste aanspreekpunt te zijn.</p>
+        <!-- Dynamic Opening Hours Widget -->
+        <div class="opening-status" id="openingStatusWidget">
+          <div class="status-header">
+            <div class="status-dot" id="statusDot"></div>
+            <div class="status-text-content">
+              <div class="status-title" id="statusTitle">Even geduld...</div>
+              <div class="status-subtitle" id="statusSubtitle"></div>
+            </div>
+          </div>
+          <div class="timeline-wrapper">
+             <div class="timeline-container">
+                <!-- 07:00 to 20:00 scale (13 hours) -->
+                <!-- 8:00 (1/13 ~ 7.7%) to 12:00 (5/13 ~ 38.5%). Width ~ 30.8% -->
+                <div class="timeline-block" id="block1" style="left: 7.69%; width: 30.77%;"></div>
+                <!-- 15:00 (8/13 ~ 61.5%) to 19:00 (12/13 ~ 92.3%). Width ~ 30.8% -->
+                <div class="timeline-block" id="block2" style="left: 61.54%; width: 30.77%;"></div>
+                <div class="timeline-marker" id="timeMarker" style="display: none;"></div>
+             </div>
+             <div class="timeline-labels">
+                <!-- Labels positioned at 8:00 (7.7%), 12:00 (38.5%), 15:00 (61.5%), 19:00 (92.3%) of 7-20 scale -->
+                <span style="left: 7.69%">08:00</span>
+                <span style="left: 38.46%">12:00</span>
+                <span style="left: 61.54%">15:00</span>
+                <span style="left: 92.31%">19:00</span>
+             </div>
+          </div>
+        </div>
         <div class="hero__actions">
           <a href="#afspraak" class="btn btn--primary btn--large" data-editable="">Maak een afspraak</a>
           <a href="tel:09/348.91.45" class="btn btn--secondary btn--large" data-editable="">📞 09/348.91.45</a>
@@ -667,7 +816,7 @@
         <div class="emergency__inner">
           <h3 class="emergency__title" data-editable="">🚨 Huisartsenwachtdienst</h3>
           <p class="emergency__text" data-editable="">Op feestdagen, 's nachts en tijdens het weekend kan u voor dringende medische problemen een beroep doen op de huisarts van wacht.</p>
-          <a href="tel:1733" class="emergency__number" data-editable="">1733</a>
+          <a href="tel:1733" class="emergency__number" data-editable="">Bel naar 1733</a>
         </div>
       </div>
     </section>
@@ -697,6 +846,111 @@
       nav.classList.remove('is-active');
     }
   });
+
+  // Dynamic Opening Hours Logic
+  (function() {
+    function updateStatus() {
+      const now = new Date();
+      // Uncomment to test different times:
+      // now.setHours(13, 30); // Test lunch break
+      // now.setDate(now.getDate() + 1); // Test tomorrow
+      
+      const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+      const hour = now.getHours();
+      const min = now.getMinutes();
+      const currentDec = hour + min / 60;
+      
+      const isWeekend = (day === 0 || day === 6);
+      
+      // Define limits for the timeline (07:00 to 20:00)
+      const startScale = 7;
+      const endScale = 20;
+      const totalHours = endScale - startScale;
+      
+      // Open blocks: 8-12 and 15-19
+      const block1Start = 8;
+      const block1End = 12;
+      const block2Start = 15;
+      const block2End = 19;
+      
+      let isOpen = false;
+      let nextOpenText = "";
+      
+      // Determine if open right now
+      if (!isWeekend) {
+        if (currentDec >= block1Start && currentDec < block1End) isOpen = true;
+        if (currentDec >= block2Start && currentDec < block2End) isOpen = true;
+      }
+      
+      // Determine Next Open Time message if closed
+      if (!isOpen) {
+        if (isWeekend) {
+          nextOpenText = "maandag 8u";
+        } else {
+            // Weekday
+            if (currentDec < block1Start) {
+                // Before morning block
+                nextOpenText = `vandaag ${block1Start}u`;
+            } else if (currentDec >= block1End && currentDec < block2Start) {
+                // Lunch break
+                nextOpenText = `vandaag ${block2Start}u`;
+            } else if (currentDec >= block2End) {
+                // After evening block -> Tomorrow
+                if (day === 5) { // Friday -> Next Monday
+                    nextOpenText = "maandag 8u";
+                } else {
+                    nextOpenText = `morgen ${block1Start}u`;
+                }
+            }
+        }
+      }
+      
+      // Update DOM
+      const titleEl = document.getElementById('statusTitle');
+      const subtitleEl = document.getElementById('statusSubtitle');
+      const dotEl = document.getElementById('statusDot');
+      const markerEl = document.getElementById('timeMarker');
+      const block1El = document.getElementById('block1');
+      const block2El = document.getElementById('block2');
+      
+      if (isOpen) {
+        titleEl.textContent = "Telefonisch bereikbaar";
+        titleEl.style.color = "var(--color-primary)";
+        subtitleEl.textContent = (currentDec < 12) ? "Tot 12u" : "Tot 19u";
+        dotEl.className = "status-dot is-open";
+        
+        // Highlight active block
+        if (currentDec < 12) {
+            block1El.classList.add('is-active-range');
+            block2El.classList.remove('is-active-range');
+        } else {
+            block1El.classList.remove('is-active-range');
+            block2El.classList.add('is-active-range');
+        }
+      } else {
+        titleEl.textContent = "Momenteel gesloten";
+        titleEl.style.color = "var(--color-text)";
+        subtitleEl.textContent = `Terug bereikbaar vanaf ${nextOpenText}`;
+        dotEl.className = "status-dot is-closed";
+        block1El.classList.remove('is-active-range');
+        block2El.classList.remove('is-active-range');
+      }
+      
+      // Update Marker Position
+      // Only show marker if within the scale timeline (7 to 20) AND it's a weekday
+      // (Or distinct "weekend" behavior? Let's hide marker on weekend to avoid confusion with M-F blocks)
+      if (!isWeekend && currentDec >= startScale && currentDec <= endScale) {
+        const percent = ((currentDec - startScale) / totalHours) * 100;
+        markerEl.style.display = 'block';
+        markerEl.style.left = `${percent}%`;
+      } else {
+        markerEl.style.display = 'none';
+      }
+    }
+
+    updateStatus();
+    setInterval(updateStatus, 60000); // Update every minute
+  })();
   </script>
 
 
