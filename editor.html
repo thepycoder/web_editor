@@ -865,7 +865,14 @@
                 ? `<!DOCTYPE ${doc.doctype.name}${doc.doctype.publicId ? ` PUBLIC "${doc.doctype.publicId}"` : ''}${doc.doctype.systemId ? ` "${doc.doctype.systemId}"` : ''}>\n`
                 : '<!DOCTYPE html>\n';
             
-            return doctype + clone.documentElement.outerHTML;
+            let html = doctype + clone.documentElement.outerHTML;
+
+            // Global replace to restore any remaining blob URLs (e.g. non-editable images)
+            for (const [filename, blobUrl] of state.assetBlobUrls) {
+                html = html.replaceAll(blobUrl, `./assets/${filename}`);
+            }
+            
+            return html;
         }
 
         // ============================================
