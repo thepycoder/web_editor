@@ -89,16 +89,21 @@ export class EditorPage {
       // Access the internal state object
       const win = window as any;
       
-      // Initialize mock state
+      // Initialize mock state with new grouped structure
       win.state = win.state || {};
-      win.state.fileHandle = { name: 'test-index.html' };
-      win.state.dirHandle = { name: 'test-project' };
-      win.state.assetsHandle = {};
-      win.state.originalContent = content;
-      win.state.hasUnsavedChanges = false;
-      win.state.assetRefs = new Map();
-      win.state.pendingDeletes = new Set();
+      win.state.project = win.state.project || {};
+      win.state.project.fileHandle = { name: 'test-index.html' };
+      win.state.project.dirHandle = { name: 'test-project' };
+      win.state.project.assetsHandle = {};
+      win.state.content = win.state.content || {};
+      win.state.content.original = content;
+      win.state.content.hasUnsavedChanges = false;
+      win.state.assetBlobUrls = win.state.assetBlobUrls || new Map();
       win.state.netlifyConfig = win.state.netlifyConfig || {};
+      win.state.ui = win.state.ui || {};
+      win.state.ui.viewport = 'desktop';
+      win.state.ui.currentImageElement = null;
+      win.state.ui.currentLinkElement = null;
 
       // Mock config file storage in memory for testing
       win._mockConfigStorage = win._mockConfigStorage || {};

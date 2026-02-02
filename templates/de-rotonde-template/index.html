@@ -2,38 +2,10 @@
 <html lang="nl"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Huisartsenpraktijk De Rotonde in Lokeren - dr. Dries Taelman, dr. Jelle Van Nieuwenhuyze, dr. Tine Konings en dr. Robbe De Bruyn. Moderne huisartsenzorg en sportgeneeskunde. Bel 09/348.91.45">
+  <meta name="theme-color" content="#3d9a7e">
   <title>Huisartsenpraktijk De Rotonde</title>
   <style>
-    /* Embedded Fonts */
-    @font-face {
-      font-family: 'DM Serif Display';
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
-      src: url('https://fonts.gstatic.com/s/dmseriftdisplay/v4/-nFnOHM81r4j6k0gjAW3mujVU2B2K_d709jy92k.woff2') format('woff2');
-    }
-    @font-face {
-      font-family: 'Nunito';
-      font-style: normal;
-      font-weight: 400;
-      font-display: swap;
-      src: url('https://fonts.gstatic.com/s/nunito/v26/XRXI3I6Li01BKofiOc5wtlZ2di8HDLshRTI9jo7eTWk.woff2') format('woff2');
-    }
-    @font-face {
-      font-family: 'Nunito';
-      font-style: normal;
-      font-weight: 600;
-      font-display: swap;
-      src: url('https://fonts.gstatic.com/s/nunito/v26/XRXI3I6Li01BKofiOc5wtlZ2di8HDOUuRTI9jo7eTWk.woff2') format('woff2');
-    }
-    @font-face {
-      font-family: 'Nunito';
-      font-style: normal;
-      font-weight: 700;
-      font-display: swap;
-      src: url('https://fonts.gstatic.com/s/nunito/v26/XRXI3I6Li01BKofiOc5wtlZ2di8HDNwuRTI9jo7eTWk.woff2') format('woff2');
-    }
-
     /* CSS Variables */
     :root {
       --color-primary: #3d9a7e;
@@ -45,10 +17,10 @@
       --color-background-alt: #f5f3f0;
       --color-surface: #ffffff;
       --color-text: #2d3a35;
-      --color-text-muted: #6b7c75;
+      --color-text-muted: #526059;
       --color-border: #e5e2dd;
-      --font-display: 'DM Serif Display', Georgia, serif;
-      --font-body: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-display: Georgia, 'Times New Roman', serif;
+      --font-body: 'Open Sans', Verdana, Arial, sans-serif;
       --font-size-base: 1rem;
       --font-size-sm: 0.875rem;
       --font-size-lg: 1.125rem;
@@ -140,7 +112,6 @@
       z-index: 1000;
       background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--color-border);
     }
     .header__inner {
       display: flex;
@@ -153,7 +124,7 @@
     .header__logo { display: flex; align-items: center; gap: var(--space-sm); }
     .header__logo img { height: 48px; width: auto; }
     .nav { display: none; }
-    @media (min-width: 768px) {
+    @media (min-width: 1500px) {
       .nav { display: flex; align-items: center; gap: var(--space-lg); }
     }
     .nav__list { display: flex; gap: var(--space-md); }
@@ -188,7 +159,7 @@
       border: none;
       cursor: pointer;
     }
-    @media (min-width: 768px) { .nav-toggle { display: none; } }
+    @media (min-width: 1500px) { .nav-toggle { display: none; } }
     .nav-toggle span {
       width: 24px;
       height: 2px;
@@ -259,17 +230,7 @@
       min-height: calc(100vh - 72px);
       margin-top: 72px;
     }
-    @media (min-width: 768px) {
-      .hero {
-        grid-template-columns: minmax(320px, 45%) 1fr;
-      }
-    }
-    @media (min-width: 992px) {
-      .hero {
-        grid-template-columns: minmax(380px, 40%) 1fr;
-      }
-    }
-    @media (min-width: 1200px) {
+    @media (min-width: 1500px) {
       .hero {
         grid-template-columns: minmax(440px, 38%) 1fr;
       }
@@ -285,15 +246,10 @@
       z-index: 1;
       overflow: hidden;
     }
-    @media (min-width: 768px) {
-      .hero__card {
-        padding: var(--space-2xl) var(--space-xl);
-        order: 0;
-      }
-    }
-    @media (min-width: 1200px) {
+    @media (min-width: 1500px) {
       .hero__card {
         padding: var(--space-3xl) var(--space-2xl);
+        order: 0;
       }
     }
     .hero__image {
@@ -301,7 +257,7 @@
       min-height: 300px;
       order: 0;
     }
-    @media (min-width: 768px) {
+    @media (min-width: 1500px) {
       .hero__image {
         order: 1;
         min-height: auto;
@@ -324,7 +280,7 @@
       text-wrap: balance;
       font-size: clamp(1.5rem, 4vw + 0.5rem, var(--font-size-5xl));
     }
-    @media (min-width: 768px) {
+    @media (min-width: 1500px) {
       .hero__title {
         font-size: clamp(1.75rem, 2.5vw + 0.5rem, var(--font-size-5xl));
       }
@@ -415,8 +371,8 @@
 
     /* Contact */
     .contact { padding: var(--space-3xl) 0; }
-    .contact__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-xl); align-items: start; }
-    @media (min-width: 768px) { .contact__grid { grid-template-columns: 1fr 1fr; } }
+    .contact__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); align-items: start; }
+    @media (min-width: 1500px) { .contact__grid { grid-template-columns: 2fr 3fr; } }
     .contact__item {
       display: flex;
       align-items: flex-start;
@@ -443,6 +399,35 @@
       overflow: hidden;
       box-shadow: var(--shadow-md);
       aspect-ratio: 16/12;
+      position: relative;
+    }
+    .contact__map-link {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .contact__map-link img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition-normal);
+    }
+    .contact__map-link:hover img {
+      transform: scale(1.02);
+    }
+    .contact__map-badge {
+      position: absolute;
+      bottom: var(--space-sm);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(45, 58, 53, 0.9);
+      color: white;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      pointer-events: none;
+      white-space: nowrap;
     }
     .contact__map iframe { width: 100%; height: 100%; border: 0; }
 
@@ -480,13 +465,13 @@
       gap: var(--space-md);
       text-align: center;
     }
-    @media (min-width: 768px) {
+    @media (min-width: 1500px) {
       .footer__inner { flex-direction: row; justify-content: space-between; text-align: left; }
     }
     .footer__logo { display: flex; align-items: center; gap: var(--space-sm); }
     .footer__logo img { height: 40px; filter: brightness(0) invert(1); }
     .footer__logo-text { font-family: var(--font-display); color: white; }
-    .footer__text { font-size: var(--font-size-sm); opacity: 0.7; max-width: 400px; }
+    .footer__text { font-size: var(--font-size-sm); color: rgba(255, 255, 255, 0.85); max-width: 400px; }
 
     /* Utilities */
     .mt-md { margin-top: var(--space-md); }
@@ -496,7 +481,7 @@
   <header class="header">
     <div class="header__inner">
       <a href="/" class="header__logo">
-        <img data-editable-image="" src="https://placehold.co/200x60/3d9a7e/ffffff?text=Logo" alt="Logo">
+        <img data-editable-image="" src="./assets/img-1770021133097.webp" alt="Huisartsenpraktijk De Rotonde logo" width="48" height="48">
       </a>
       <nav class="nav">
         <ul class="nav__list" data-repeatable="">
@@ -535,7 +520,7 @@
         </div>
       </div>
       <div class="hero__image">
-        <img data-editable-image="" src="./assets/image-1.jpg" alt="Huisartsenpraktijk De Rotonde">
+        <img data-editable-image="" src="./assets/image-1.webp" alt="Team Huisartsenpraktijk De Rotonde in de tuin" width="800" height="600">
       </div>
     </section>
 
@@ -570,35 +555,35 @@
         <div class="team__grid" data-repeatable="">
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/img-1769951854405.png" alt="Team member">
+              <img data-editable-image="" src="./assets/img-1769951854405.webp" alt="Dr. Dries Taelman - Huisarts en Sportarts" width="120" height="120" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Dries Taelman</h3>
             <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-3.png" alt="Team member">
+              <img data-editable-image="" src="./assets/image-3.webp" alt="Dr. Jelle Van Nieuwenhuyze - Huisarts en Sportarts" width="120" height="120" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Jelle Van Nieuwenhuyze</h3>
             <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-4.png" alt="Team member">
+              <img data-editable-image="" src="./assets/image-4.webp" alt="Dr. Tine Konings - Huisarts" width="120" height="120" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Tine Konings</h3>
             <p class="team-card__role" data-editable="">Huisarts</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-5.png" alt="Team member">
+              <img data-editable-image="" src="./assets/image-5.webp" alt="Dr. Robbe De Bruyn - Huisarts" width="120" height="120" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Robbe De Bruyn</h3>
             <p class="team-card__role" data-editable="">Huisarts</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-6.png" alt="Team member">
+              <img data-editable-image="" src="./assets/image-6.webp" alt="Saartje De Maesschalck - Verpleegkundige" width="120" height="120" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Saartje De Maesschalck</h3>
             <p class="team-card__role" data-editable="">Verpleegkundige</p>
@@ -639,8 +624,10 @@
             <a href="#afspraak" class="btn btn--primary mt-md" data-editable="">Maak een afspraak</a>
           </div>
           <div class="contact__map">
-            <iframe src="https://maps.google.com/maps?q=Belgie%2C%20Lokeren%2C%20Gentse%20Steenweg%20143&amp;t=m&amp;z=12&amp;output=embed&amp;iwloc=near" width="100%" height="100%" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
-            </iframe>
+            <a href="https://www.google.com/maps/search/?api=1&query=Gentse+Steenweg+143,+9160+Lokeren,+Belgium" target="_blank" rel="noopener noreferrer" title="Bekijk locatie op Google Maps - Gentse Steenweg 143, 9160 Lokeren" class="contact__map-link">
+              <img src="./assets/map-static.webp" alt="Locatie Huisartsenpraktijk De Rotonde - Gentse Steenweg 143, 9160 Lokeren" width="600" height="400" loading="lazy">
+            </a>
+            <span class="contact__map-badge">📍 Klik op de kaart om naar Google Maps te gaan</span>
           </div>
         </div>
       </div>
@@ -662,7 +649,7 @@
     <div class="container">
       <div class="footer__inner">
         <div class="footer__logo">
-          <img data-editable-image="" src="https://placehold.co/200x60/ffffff/3d9a7e?text=Logo" alt="Logo">
+          <img data-editable-image="" src="./assets/img-1770021146539.webp" alt="Huisartsenpraktijk De Rotonde logo" width="40" height="40" loading="lazy">
           <span class="footer__logo-text" data-editable="">Huisartsenpraktijk De Rotonde</span>
         </div>
         <p class="footer__text" data-editable="">Huisartsenpraktijk De Rotonde - Medische gegevens worden veilig bewaard.</p>

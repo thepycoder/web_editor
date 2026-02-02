@@ -134,22 +134,22 @@ test.describe('Viewport Modes', () => {
 
   test('state should track current viewport mode', async ({ page }) => {
     // Check initial state
-    let currentViewport = await page.evaluate(() => (window as any).state.currentViewport);
+    let currentViewport = await page.evaluate(() => (window as any).state.ui.viewport);
     expect(currentViewport).toBe('desktop');
 
     // Switch to tablet
     await page.locator('#viewport-tablet').click();
-    currentViewport = await page.evaluate(() => (window as any).state.currentViewport);
+    currentViewport = await page.evaluate(() => (window as any).state.ui.viewport);
     expect(currentViewport).toBe('tablet');
 
     // Switch to phone
     await page.locator('#viewport-phone').click();
-    currentViewport = await page.evaluate(() => (window as any).state.currentViewport);
+    currentViewport = await page.evaluate(() => (window as any).state.ui.viewport);
     expect(currentViewport).toBe('phone');
 
     // Switch back to desktop
     await page.locator('#viewport-desktop').click();
-    currentViewport = await page.evaluate(() => (window as any).state.currentViewport);
+    currentViewport = await page.evaluate(() => (window as any).state.ui.viewport);
     expect(currentViewport).toBe('desktop');
   });
 

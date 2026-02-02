@@ -430,10 +430,10 @@
                 <span>🖥️</span>
             </button>
             <button class="viewport-btn" id="viewport-tablet" title="Tablet view (768px)">
-                <span>📱</span>
+                <span>💻</span>
             </button>
             <button class="viewport-btn" id="viewport-phone" title="Phone view (375px)">
-                <span>📲</span>
+                <span>📱</span>
             </button>
         </div>
         <button class="btn btn-primary" id="btn-settings">
@@ -553,116 +553,61 @@
         // State Management
         // ============================================
         const state = {
-            fileHandle: null,           // Handle for index.html
-            originalContent: '',
-            hasUnsavedChanges: false,
+            // Project handles
+            project: {
+                dirHandle: null,
+                fileHandle: null,
+                assetsHandle: null,
+            },
+            // Content state
+            content: {
+                original: '',
+                hasUnsavedChanges: false,
+            },
+            // Asset blob URLs for preview rendering
+            assetBlobUrls: new Map(),
+            // Netlify configuration
             netlifyConfig: null,
-            // Directory-based asset management
-            dirHandle: null,            // Project directory handle
-            assetsHandle: null,         // assets/ subdirectory handle
-            assetRefs: new Map(),       // filename -> Set of element references
-            pendingDeletes: new Set(),  // files to delete on save
-            assetBlobUrls: new Map(),   // filename -> blob URL for preview rendering
-            // Viewport mode
-            currentViewport: 'desktop', // 'desktop' | 'tablet' | 'phone'
+            // UI state
+            ui: {
+                viewport: 'desktop',
+                currentImageElement: null,
+                currentLinkElement: null,
+            },
         };
 
         // ============================================
-        // DOM Elements
+        // DOM Element Helper (query on demand)
         // ============================================
-        const elements = {
-            btnOpen: document.getElementById('btn-open'),
-            btnOpenEmpty: document.getElementById('btn-open-empty'),
-            btnSave: document.getElementById('btn-save'),
-            btnSettings: document.getElementById('btn-settings'),
-            btnDeployNetlify: document.getElementById('btn-deploy-netlify'),
-            btnDownloadNetlify: document.getElementById('btn-download-netlify'),
-            fileName: document.getElementById('file-name'),
-            unsavedIndicator: document.getElementById('unsaved-indicator'),
-            emptyState: document.getElementById('empty-state'),
-            previewWrapper: document.getElementById('preview-wrapper'),
-            previewFrame: document.getElementById('preview-frame'),
-            settingsModal: document.getElementById('settings-modal'),
-            settingsClose: document.getElementById('settings-close'),
-            settingsCancel: document.getElementById('settings-cancel'),
-            settingsSave: document.getElementById('settings-save'),
-            // Project folder
-            projectFolder: document.getElementById('project-folder'),
-            btnSelectFolder: document.getElementById('btn-select-folder'),
-            // Netlify
-            netlifyToken: document.getElementById('netlify-token'),
-            netlifySiteId: document.getElementById('netlify-siteId'),
-            netlifyCustomDomain: document.getElementById('netlify-customDomain'),
-            netlifyStatus: document.getElementById('netlify-status'),
-            netlifyStatusText: document.getElementById('netlify-status-text'),
-            // Other
-            toastContainer: document.getElementById('toast-container'),
-            imageInput: document.getElementById('image-input'),
-            linkModal: document.getElementById('link-modal'),
-            linkClose: document.getElementById('link-close'),
-            linkCancel: document.getElementById('link-cancel'),
-            linkSave: document.getElementById('link-save'),
-            linkText: document.getElementById('link-text'),
-            linkUrl: document.getElementById('link-url'),
-            // Viewport buttons
-            viewportDesktop: document.getElementById('viewport-desktop'),
-            viewportTablet: document.getElementById('viewport-tablet'),
-            viewportPhone: document.getElementById('viewport-phone'),
-        };
+        const $ = id => document.getElementById(id);
 
         // ============================================
         // IndexedDB for Directory Handle Persistence
         // ============================================
-        const DB_NAME = 'cms-storage';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'handles';
-
-        function openDatabase() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve(request.result);
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME);
-                    }
-                };
-            });
-        }
-
-        async function saveDirectoryHandle(handle) {
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.put(handle, 'projectDir');
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve();
-            });
-        }
-
-        async function loadDirectoryHandle() {
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.get('projectDir');
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve(request.result || null);
-            });
-        }
-
-        async function clearDirectoryHandle() {
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.delete('projectDir');
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve();
-            });
-        }
+        const idb = {
+            db: null,
+            async open() {
+                if (this.db) return this.db;
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open('cms-storage', 1);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(this.db = request.result);
+                    request.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+                });
+            },
+            async run(mode, operation) {
+                const db = await this.open();
+                return new Promise((resolve, reject) => {
+                    const tx = db.transaction('handles', mode);
+                    const request = operation(tx.objectStore('handles'));
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            },
+            save: (handle) => idb.run('readwrite', store => store.put(handle, 'projectDir')),
+            load: () => idb.run('readonly', store => store.get('projectDir')),
+            clear: () => idb.run('readwrite', store => store.delete('projectDir')),
+        };
 
         // ============================================
         // Project Config File (.web-editor.json)
@@ -694,46 +639,75 @@
                 <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
                 <span>${message}</span>
             `;
-            elements.toastContainer.appendChild(toast);
+            $('toast-container').appendChild(toast);
             setTimeout(() => toast.remove(), 4000);
+        }
+
+        // ============================================
+        // Modal Helpers
+        // ============================================
+        function closeModal(modalId) {
+            $(modalId).classList.remove('active');
         }
 
         // ============================================
         // Viewport Mode
         // ============================================
         function setViewportMode(mode) {
-            // Validate mode
-            if (!['desktop', 'tablet', 'phone'].includes(mode)) {
-                console.warn('Invalid viewport mode:', mode);
-                return;
-            }
-
-            // Update state
-            state.currentViewport = mode;
-
-            // Update button states
-            elements.viewportDesktop.classList.toggle('active', mode === 'desktop');
-            elements.viewportTablet.classList.toggle('active', mode === 'tablet');
-            elements.viewportPhone.classList.toggle('active', mode === 'phone');
-
-            // Update preview frame class
-            elements.previewFrame.classList.remove('viewport-desktop', 'viewport-tablet', 'viewport-phone');
-            elements.previewFrame.classList.add(`viewport-${mode}`);
+            if (!['desktop', 'tablet', 'phone'].includes(mode)) return;
+            state.ui.viewport = mode;
+            ['desktop', 'tablet', 'phone'].forEach(m => 
+                $(`viewport-${m}`).classList.toggle('active', m === mode)
+            );
+            const frame = $('preview-frame');
+            frame.className = `viewport-${mode}`;
         }
 
         // ============================================
         // File System Operations
         // ============================================
-        async function openProject() {
+        async function openProject(dirHandle = null) {
             try {
-                const dirHandle = await window.showDirectoryPicker();
+                // If no handle provided, prompt user to select
+                if (!dirHandle) {
+                    dirHandle = await window.showDirectoryPicker();
+                }
+                
+                // Load project config from .web-editor.json
+                const config = await loadProjectConfig(dirHandle);
+                state.netlifyConfig = config.netlify || {};
+
+                // Migration: if file config is empty but localStorage has config, migrate it
+                const oldConfig = localStorage.getItem('cms-netlify-config');
+                if (oldConfig && !state.netlifyConfig.token) {
+                    const parsed = JSON.parse(oldConfig);
+                    state.netlifyConfig = {
+                        token: parsed.token || '',
+                        siteId: parsed.siteId || '',
+                        customDomain: parsed.customDomain || '',
+                    };
+                    await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
+                    localStorage.removeItem('cms-netlify-config');
+                }
+
+                $('netlify-token').value = state.netlifyConfig.token || '';
+                $('netlify-siteId').value = state.netlifyConfig.siteId || '';
+                $('netlify-customDomain').value = state.netlifyConfig.customDomain || '';
+                $('project-folder').value = dirHandle.name;
+                updateNetlifyStatus();
                 
                 // Check for index.html
                 let fileHandle;
                 try {
                     fileHandle = await dirHandle.getFileHandle('index.html');
                 } catch (err) {
-                    showToast('No index.html found in selected folder. Please select a project folder containing index.html.', 'error');
+                    // No index.html - folder is set but empty
+                    state.project.dirHandle = dirHandle;
+                    state.project.assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
+                    $('file-name').textContent = dirHandle.name + ' (empty)';
+                    $('file-name').style.display = 'block';
+                    updateDeployButtons();
+                    showToast('No index.html found in selected folder.', 'error');
                     return;
                 }
                 
@@ -746,11 +720,9 @@
                 }
                 
                 // Update state
-                state.dirHandle = dirHandle;
-                state.assetsHandle = assetsHandle;
-                state.fileHandle = fileHandle;
-                state.assetRefs.clear();
-                state.pendingDeletes.clear();
+                state.project.dirHandle = dirHandle;
+                state.project.assetsHandle = assetsHandle;
+                state.project.fileHandle = fileHandle;
                 state.assetBlobUrls.clear();
                 
                 // Load all assets as blob URLs for preview rendering
@@ -765,18 +737,15 @@
                 // Load index.html
                 const file = await fileHandle.getFile();
                 const content = await file.text();
-                state.originalContent = content;
-                state.hasUnsavedChanges = false;
+                state.content.original = content;
+                state.content.hasUnsavedChanges = false;
                 
-                // Scan and track all asset references
-                scanAssetReferences(content);
-                
-                elements.fileName.textContent = dirHandle.name;
-                elements.fileName.style.display = 'block';
-                elements.unsavedIndicator.style.display = 'none';
-                elements.btnSave.disabled = false;
-                elements.emptyState.style.display = 'none';
-                elements.previewWrapper.style.display = 'block';
+                $('file-name').textContent = dirHandle.name;
+                $('file-name').style.display = 'block';
+                $('unsaved-indicator').style.display = 'none';
+                $('btn-save').disabled = false;
+                $('empty-state').style.display = 'none';
+                $('preview-wrapper').style.display = 'block';
                 
                 renderPreview(content);
                 updateDeployButtons();
@@ -787,71 +756,61 @@
                 }
             }
         }
-        
-        // Scan HTML content for asset references and build tracking map
-        function scanAssetReferences(content) {
-            state.assetRefs.clear();
-            const regex = /\.\/assets\/([^"'\s)]+)/g;
-            let match;
-            while ((match = regex.exec(content)) !== null) {
-                const filename = match[1];
-                if (!state.assetRefs.has(filename)) {
-                    state.assetRefs.set(filename, new Set());
-                }
-            }
+
+        // Collect referenced assets from the current document
+        function getReferencedAssets(doc) {
+            const referenced = new Set();
+            doc.querySelectorAll('[data-editable-image]').forEach(img => {
+                const filename = img.dataset.assetFilename;
+                if (filename) referenced.add(filename);
+            });
+            return referenced;
         }
-        
-        // Build element-to-asset reference map from the live document
-        function buildElementRefs(doc) {
-            // Clear element references but keep filenames
-            for (const refs of state.assetRefs.values()) {
-                refs.clear();
+
+        // Clean up orphaned assets on save (lazy cleanup)
+        async function cleanupOrphanedAssets(doc) {
+            const referenced = getReferencedAssets(doc);
+            const assetsHandle = state.project.assetsHandle;
+            if (!assetsHandle) return;
+            
+            const toDelete = [];
+            for await (const entry of assetsHandle.values()) {
+                if (entry.kind === 'file' && !referenced.has(entry.name)) {
+                    toDelete.push(entry.name);
+                }
             }
             
-            // Find all images with asset references
-            // Note: src is now a blob URL, so we need to reverse-lookup the filename
-            doc.querySelectorAll('[data-editable-image]').forEach(img => {
-                const src = img.getAttribute('src') || '';
-                // Find which filename this blob URL belongs to
-                for (const [filename, blobUrl] of state.assetBlobUrls) {
-                    if (src === blobUrl) {
-                        if (state.assetRefs.has(filename)) {
-                            state.assetRefs.get(filename).add(img);
-                        }
-                        // Store filename on element for later reference
-                        img.dataset.assetFilename = filename;
-                        break;
+            for (const filename of toDelete) {
+                try {
+                    await assetsHandle.removeEntry(filename);
+                    if (state.assetBlobUrls.has(filename)) {
+                        URL.revokeObjectURL(state.assetBlobUrls.get(filename));
+                        state.assetBlobUrls.delete(filename);
                     }
+                } catch (err) {
+                    console.warn(`Could not delete ${filename}:`, err);
                 }
-            });
+            }
         }
 
         async function saveFile() {
-            if (!state.fileHandle || !state.dirHandle) return;
+            if (!state.project.fileHandle || !state.project.dirHandle) return;
             
             try {
+                const doc = $('preview-frame').contentDocument;
+                
+                // Clean up orphaned assets
+                await cleanupOrphanedAssets(doc);
+                
                 // Save HTML content
                 const content = getEditedContent();
-                const writable = await state.fileHandle.createWritable();
+                const writable = await state.project.fileHandle.createWritable();
                 await writable.write(content);
                 await writable.close();
                 
-                // Delete orphaned assets
-                for (const filename of state.pendingDeletes) {
-                    try {
-                        await state.assetsHandle.removeEntry(filename);
-                    } catch (err) {
-                        console.warn(`Could not delete ${filename}:`, err);
-                    }
-                }
-                state.pendingDeletes.clear();
-                
-                // Re-scan references to ensure consistency
-                scanAssetReferences(content);
-                
-                state.originalContent = content;
-                state.hasUnsavedChanges = false;
-                elements.unsavedIndicator.style.display = 'none';
+                state.content.original = content;
+                state.content.hasUnsavedChanges = false;
+                $('unsaved-indicator').style.display = 'none';
                 showToast('Project saved', 'success');
             } catch (err) {
                 showToast('Failed to save project: ' + err.message, 'error');
@@ -859,29 +818,25 @@
         }
 
         function markUnsaved() {
-            if (!state.hasUnsavedChanges) {
-                state.hasUnsavedChanges = true;
-                elements.unsavedIndicator.style.display = 'inline';
+            if (!state.content.hasUnsavedChanges) {
+                state.content.hasUnsavedChanges = true;
+                $('unsaved-indicator').style.display = 'inline';
             }
         }
 
         function getEditedContent() {
-            const doc = elements.previewFrame.contentDocument;
-            if (!doc) return state.originalContent;
+            const doc = $('preview-frame').contentDocument;
+            if (!doc) return state.content.original;
             
             // Clone the document to remove editor-specific elements
             const clone = doc.cloneNode(true);
             
             // Remove injected editor styles and scripts
-            const editorStyle = clone.getElementById('cms-editor-styles');
-            if (editorStyle) editorStyle.remove();
-            
-            const editorScript = clone.getElementById('cms-editor-script');
-            if (editorScript) editorScript.remove();
+            clone.getElementById('cms-editor-styles')?.remove();
+            clone.getElementById('cms-editor-script')?.remove();
             
             // Remove any floating toolbars
-            clone.querySelectorAll('.cms-section-toolbar').forEach(el => el.remove());
-            clone.querySelectorAll('.cms-toggle-toolbar').forEach(el => el.remove());
+            clone.querySelectorAll('.cms-section-toolbar, .cms-toggle-toolbar').forEach(el => el.remove());
             
             // Handle toggleable elements - add display:none for hidden ones
             clone.querySelectorAll('[data-toggleable]').forEach(el => {
@@ -891,12 +846,12 @@
                 el.removeAttribute('data-cms-hidden');
             });
             
-            // Remove contenteditable attributes that we added
+            // Remove contenteditable attributes
             clone.querySelectorAll('[contenteditable]').forEach(el => {
                 el.removeAttribute('contenteditable');
             });
             
-            // Convert blob URLs back to ./assets/ paths for images
+            // Convert blob URLs back to ./assets/ paths
             clone.querySelectorAll('[data-editable-image]').forEach(img => {
                 const filename = img.dataset.assetFilename;
                 if (filename) {
@@ -917,13 +872,12 @@
         // Preview Rendering
         // ============================================
         function renderPreview(content) {
-            const frame = elements.previewFrame;
+            const frame = $('preview-frame');
             const doc = frame.contentDocument;
             
             // Replace ./assets/ paths with blob URLs for preview
             let previewContent = content;
             for (const [filename, blobUrl] of state.assetBlobUrls) {
-                // Replace all occurrences of ./assets/filename with the blob URL
                 const assetPath = `./assets/${filename}`;
                 previewContent = previewContent.split(assetPath).join(blobUrl);
             }
@@ -938,8 +892,16 @@
             setupToggleableElements(doc);
             setupRepeatableSections(doc);
             
-            // Build element-to-asset reference tracking
-            buildElementRefs(doc);
+            // Build filename references for images (for saving)
+            doc.querySelectorAll('[data-editable-image]').forEach(img => {
+                const src = img.getAttribute('src') || '';
+                for (const [filename, blobUrl] of state.assetBlobUrls) {
+                    if (src === blobUrl) {
+                        img.dataset.assetFilename = filename;
+                        break;
+                    }
+                }
+            });
         }
 
         function injectEditorStyles(doc) {
@@ -1094,17 +1056,14 @@
             doc.querySelectorAll('[data-editable]').forEach(el => {
                 el.setAttribute('contenteditable', 'true');
                 el.addEventListener('input', () => markUnsaved());
-                el.addEventListener('blur', () => {
-                    // Remove empty contenteditable styling
-                });
             });
             
             // Setup image replacement
             doc.querySelectorAll('[data-editable-image]').forEach(img => {
                 img.addEventListener('click', (e) => {
                     e.preventDefault();
-                    state.currentImageElement = img;
-                    elements.imageInput.click();
+                    state.ui.currentImageElement = img;
+                    $('image-input').click();
                 });
             });
             
@@ -1113,11 +1072,11 @@
                 link.addEventListener('click', (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    state.currentLinkElement = link;
-                    elements.linkText.value = link.textContent || '';
-                    elements.linkUrl.value = link.getAttribute('href') || '#';
-                    elements.linkModal.classList.add('active');
-                    elements.linkText.focus();
+                    state.ui.currentLinkElement = link;
+                    $('link-text').value = link.textContent || '';
+                    $('link-url').value = link.getAttribute('href') || '#';
+                    $('link-modal').classList.add('active');
+                    $('link-text').focus();
                 });
             });
         }
@@ -1169,111 +1128,46 @@
                 : `<button class="cms-toggle-btn" title="Hide this element">👁️ Visible</button>`;
         }
 
-        // Add asset references for all images within an element
-        function addAssetRefsForElement(element) {
-            element.querySelectorAll('[data-editable-image]').forEach(img => {
-                const filename = img.dataset.assetFilename;
-                if (filename) {
-                    if (!state.assetRefs.has(filename)) {
-                        state.assetRefs.set(filename, new Set());
-                    }
-                    state.assetRefs.get(filename).add(img);
-                }
+        function setupRepeatableSections(doc) {
+            doc.querySelectorAll('[data-repeatable]').forEach(container => {
+                Array.from(container.children).forEach(child => attachSectionToolbar(child, container, doc));
             });
         }
         
-        // Remove asset references for all images within an element, queue orphans for deletion
-        function removeAssetRefsForElement(element) {
-            element.querySelectorAll('[data-editable-image]').forEach(img => {
-                const filename = img.dataset.assetFilename;
-                if (filename && state.assetRefs.has(filename)) {
-                    state.assetRefs.get(filename).delete(img);
-                    if (state.assetRefs.get(filename).size === 0) {
-                        // No more references - schedule for deletion
-                        state.pendingDeletes.add(filename);
-                        state.assetRefs.delete(filename);
-                        // Revoke blob URL
-                        if (state.assetBlobUrls.has(filename)) {
-                            URL.revokeObjectURL(state.assetBlobUrls.get(filename));
-                            state.assetBlobUrls.delete(filename);
-                        }
-                    }
-                }
-            });
-        }
-
-        function setupRepeatableSections(doc) {
-            doc.querySelectorAll('[data-repeatable]').forEach(container => {
-                Array.from(container.children).forEach(child => {
-                    // Make sure the child has position relative for toolbar positioning
-                    const computedStyle = doc.defaultView.getComputedStyle(child);
-                    if (computedStyle.position === 'static') {
-                        child.style.position = 'relative';
-                    }
-                    
-                    // Add toolbar
-                    const toolbar = doc.createElement('div');
-                    toolbar.className = 'cms-section-toolbar';
-                    toolbar.innerHTML = `
-                        <button class="cms-section-btn duplicate" title="Duplicate">➕ Duplicate</button>
-                        <button class="cms-section-btn delete" title="Delete">🗑️ Delete</button>
-                    `;
-                    child.appendChild(toolbar);
-                    
-                    // Setup duplicate button
-                    toolbar.querySelector('.duplicate').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        const clone = child.cloneNode(true);
-                        // Re-setup the cloned element
-                        child.parentNode.insertBefore(clone, child.nextSibling);
-                        setupEditableElements(doc);
-                        setupClonedSectionEvents(clone, doc);
-                        // Track asset refs for cloned images
-                        addAssetRefsForElement(clone);
-                        markUnsaved();
-                        showToast('Section duplicated', 'success');
-                    });
-                    
-                    // Setup delete button
-                    toolbar.querySelector('.delete').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (container.children.length > 1) {
-                            // Remove asset refs before removing element
-                            removeAssetRefsForElement(child);
-                            child.remove();
-                            markUnsaved();
-                            showToast('Section deleted', 'success');
-                        } else {
-                            showToast('Cannot delete the last item', 'error');
-                        }
-                    });
-                });
-            });
-        }
-
-        function setupClonedSectionEvents(element, doc) {
-            const toolbar = element.querySelector('.cms-section-toolbar');
-            if (!toolbar) return;
+        function attachSectionToolbar(element, container, doc) {
+            // Remove any existing toolbar (from cloneNode)
+            element.querySelectorAll('.cms-section-toolbar').forEach(t => t.remove());
             
-            const container = element.parentNode;
+            // Make sure the element has position relative for toolbar positioning
+            const computedStyle = doc.defaultView.getComputedStyle(element);
+            if (computedStyle.position === 'static') {
+                element.style.position = 'relative';
+            }
             
+            // Add toolbar
+            const toolbar = doc.createElement('div');
+            toolbar.className = 'cms-section-toolbar';
+            toolbar.innerHTML = `
+                <button class="cms-section-btn duplicate" title="Duplicate">➕ Duplicate</button>
+                <button class="cms-section-btn delete" title="Delete">🗑️ Delete</button>
+            `;
+            element.appendChild(toolbar);
+            
+            // Setup duplicate button
             toolbar.querySelector('.duplicate').addEventListener('click', (e) => {
                 e.stopPropagation();
                 const clone = element.cloneNode(true);
                 element.parentNode.insertBefore(clone, element.nextSibling);
                 setupEditableElements(doc);
-                setupClonedSectionEvents(clone, doc);
-                // Track asset refs for cloned images
-                addAssetRefsForElement(clone);
+                attachSectionToolbar(clone, container, doc);
                 markUnsaved();
                 showToast('Section duplicated', 'success');
             });
             
+            // Setup delete button
             toolbar.querySelector('.delete').addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (container.children.length > 1) {
-                    // Remove asset refs before removing element
-                    removeAssetRefsForElement(element);
                     element.remove();
                     markUnsaved();
                     showToast('Section deleted', 'success');
@@ -1286,54 +1180,29 @@
         // ============================================
         // Image Replacement
         // ============================================
-        elements.imageInput.addEventListener('change', async (e) => {
+        $('image-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
-            const img = state.currentImageElement;
+            const img = state.ui.currentImageElement;
             if (!file || !img) return;
             
-            // Check if we have a project open (directory-based)
-            if (!state.assetsHandle) {
+            // Check if we have a project open
+            if (!state.project.assetsHandle) {
                 showToast('Please open a project folder first', 'error');
-                elements.imageInput.value = '';
-                state.currentImageElement = null;
+                $('image-input').value = '';
+                state.ui.currentImageElement = null;
                 return;
             }
             
             try {
-                // Get old image filename from the original src attribute or data attribute
-                // The img.src in the iframe will be a blob URL, so we need to track the original filename
-                const oldFilename = img.dataset.assetFilename || null;
-                
                 // Generate new filename with timestamp to avoid conflicts
                 const ext = file.name.split('.').pop().toLowerCase();
                 const newFilename = `img-${Date.now()}.${ext}`;
                 
                 // Write new file to assets folder
-                const newFileHandle = await state.assetsHandle.getFileHandle(newFilename, { create: true });
+                const newFileHandle = await state.project.assetsHandle.getFileHandle(newFilename, { create: true });
                 const writable = await newFileHandle.createWritable();
                 await writable.write(file);
                 await writable.close();
-                
-                // Update reference tracking - remove from old
-                if (oldFilename && state.assetRefs.has(oldFilename)) {
-                    state.assetRefs.get(oldFilename).delete(img);
-                    if (state.assetRefs.get(oldFilename).size === 0) {
-                        // No more references - schedule for deletion
-                        state.pendingDeletes.add(oldFilename);
-                        state.assetRefs.delete(oldFilename);
-                        // Revoke old blob URL
-                        if (state.assetBlobUrls.has(oldFilename)) {
-                            URL.revokeObjectURL(state.assetBlobUrls.get(oldFilename));
-                            state.assetBlobUrls.delete(oldFilename);
-                        }
-                    }
-                }
-                
-                // Track new reference
-                if (!state.assetRefs.has(newFilename)) {
-                    state.assetRefs.set(newFilename, new Set());
-                }
-                state.assetRefs.get(newFilename).add(img);
                 
                 // Create blob URL for the new image for preview display
                 const newBlobUrl = URL.createObjectURL(file);
@@ -1349,8 +1218,8 @@
                 showToast('Failed to replace image: ' + err.message, 'error');
             }
             
-            elements.imageInput.value = '';
-            state.currentImageElement = null;
+            $('image-input').value = '';
+            state.ui.currentImageElement = null;
         });
 
         // ============================================
@@ -1358,12 +1227,12 @@
         // ============================================
         async function saveNetlifyConfig() {
             state.netlifyConfig = {
-                token: elements.netlifyToken.value,
-                siteId: elements.netlifySiteId.value,
-                customDomain: elements.netlifyCustomDomain.value,
+                token: $('netlify-token').value,
+                siteId: $('netlify-siteId').value,
+                customDomain: $('netlify-customDomain').value,
             };
-            if (state.dirHandle) {
-                await saveProjectConfig(state.dirHandle, { netlify: state.netlifyConfig });
+            if (state.project.dirHandle) {
+                await saveProjectConfig(state.project.dirHandle, { netlify: state.netlifyConfig });
             }
             updateNetlifyStatus();
         }
@@ -1371,17 +1240,8 @@
         async function selectProjectFolder() {
             try {
                 const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-
-                // Save the handle to IndexedDB
-                await saveDirectoryHandle(dirHandle);
-
-                // Update UI
-                elements.projectFolder.value = dirHandle.name;
-
-                // Open the project
-                await openProjectFromHandle(dirHandle);
-
-                showToast(`Project folder set: ${dirHandle.name}`, 'success');
+                await idb.save(dirHandle);
+                await openProject(dirHandle);
             } catch (err) {
                 if (err.name !== 'AbortError') {
                     showToast('Failed to select folder: ' + err.message, 'error');
@@ -1389,96 +1249,9 @@
             }
         }
 
-        async function openProjectFromHandle(dirHandle) {
-            try {
-                // Load project config from .web-editor.json
-                const config = await loadProjectConfig(dirHandle);
-                state.netlifyConfig = config.netlify || {};
-
-                // Migration: if file config is empty but localStorage has config, migrate it
-                const oldConfig = localStorage.getItem('cms-netlify-config');
-                if (oldConfig && !state.netlifyConfig.token) {
-                    const parsed = JSON.parse(oldConfig);
-                    state.netlifyConfig = {
-                        token: parsed.token || '',
-                        siteId: parsed.siteId || '',
-                        customDomain: parsed.customDomain || '',
-                    };
-                    await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
-                    localStorage.removeItem('cms-netlify-config');
-                }
-
-                elements.netlifyToken.value = state.netlifyConfig.token || '';
-                elements.netlifySiteId.value = state.netlifyConfig.siteId || '';
-                elements.netlifyCustomDomain.value = state.netlifyConfig.customDomain || '';
-                elements.projectFolder.value = dirHandle.name;
-                updateNetlifyStatus();
-
-                // Check for index.html
-                let fileHandle;
-                try {
-                    fileHandle = await dirHandle.getFileHandle('index.html');
-                } catch (err) {
-                    // No index.html - this is fine, folder is set but empty
-                    state.dirHandle = dirHandle;
-                    state.assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
-                    elements.fileName.textContent = dirHandle.name + ' (empty)';
-                    elements.fileName.style.display = 'block';
-                    updateDeployButtons();
-                    return;
-                }
-
-                // Get or create assets folder
-                const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
-
-                // Revoke old blob URLs before clearing
-                for (const url of state.assetBlobUrls.values()) {
-                    URL.revokeObjectURL(url);
-                }
-
-                // Update state
-                state.dirHandle = dirHandle;
-                state.assetsHandle = assetsHandle;
-                state.fileHandle = fileHandle;
-                state.assetRefs.clear();
-                state.pendingDeletes.clear();
-                state.assetBlobUrls.clear();
-
-                // Load all assets as blob URLs for preview rendering
-                for await (const entry of assetsHandle.values()) {
-                    if (entry.kind === 'file') {
-                        const file = await entry.getFile();
-                        const blobUrl = URL.createObjectURL(file);
-                        state.assetBlobUrls.set(entry.name, blobUrl);
-                    }
-                }
-
-                // Load index.html
-                const file = await fileHandle.getFile();
-                const content = await file.text();
-                state.originalContent = content;
-                state.hasUnsavedChanges = false;
-
-                // Scan and track all asset references
-                scanAssetReferences(content);
-
-                elements.fileName.textContent = dirHandle.name;
-                elements.fileName.style.display = 'block';
-                elements.unsavedIndicator.style.display = 'none';
-                elements.btnSave.disabled = false;
-                elements.emptyState.style.display = 'none';
-                elements.previewWrapper.style.display = 'block';
-
-                renderPreview(content);
-                updateDeployButtons();
-            } catch (err) {
-                showToast('Failed to open project: ' + err.message, 'error');
-            }
-        }
-
         async function tryAutoOpenProject() {
             try {
-                const dirHandle = await loadDirectoryHandle();
+                const dirHandle = await idb.load();
                 if (!dirHandle) return;
 
                 // Request permission
@@ -1488,24 +1261,23 @@
                     return;
                 }
 
-                await openProjectFromHandle(dirHandle);
-                showToast(`Opened project: ${dirHandle.name}`, 'success');
+                await openProject(dirHandle);
             } catch (err) {
                 console.log('Auto-open failed:', err.message);
                 // Permission denied or handle invalid - clear it
-                await clearDirectoryHandle();
-                elements.projectFolder.value = '';
+                await idb.clear();
+                $('project-folder').value = '';
             }
         }
 
         function updateNetlifyStatus() {
             const configured = state.netlifyConfig && state.netlifyConfig.token;
-            elements.netlifyStatus.classList.toggle('connected', configured);
+            $('netlify-status').classList.toggle('connected', configured);
             if (configured) {
                 const siteInfo = state.netlifyConfig.siteId ? `Site: ${state.netlifyConfig.siteId}` : 'New site on deploy';
-                elements.netlifyStatusText.textContent = `Netlify: ${siteInfo}`;
+                $('netlify-status-text').textContent = `Netlify: ${siteInfo}`;
             } else {
-                elements.netlifyStatusText.textContent = 'Netlify: Not configured';
+                $('netlify-status-text').textContent = 'Netlify: Not configured';
             }
             updateDeployButtons();
         }
@@ -1514,17 +1286,18 @@
         // Netlify Deployment
         // ============================================
         async function deployToNetlify() {
-            if (!state.netlifyConfig || !state.netlifyConfig.token || !state.fileHandle || !state.dirHandle) return;
+            const { fileHandle, dirHandle, assetsHandle } = state.project;
+            if (!state.netlifyConfig?.token || !fileHandle || !dirHandle) return;
 
             try {
                 // Auto-save before deploying
-                if (state.hasUnsavedChanges) {
+                if (state.content.hasUnsavedChanges) {
                     showToast('Saving changes...', 'info');
                     await saveFile();
                 }
 
                 showToast('Starting Netlify deployment...', 'info');
-                elements.btnDeployNetlify.disabled = true;
+                $('btn-deploy-netlify').disabled = true;
 
                 const content = getEditedContent();
                 const token = state.netlifyConfig.token;
@@ -1558,8 +1331,8 @@
                     
                     // Save the site ID for future deploys
                     state.netlifyConfig.siteId = siteId;
-                    elements.netlifySiteId.value = siteId;
-                    await saveProjectConfig(state.dirHandle, { netlify: state.netlifyConfig });
+                    $('netlify-siteId').value = siteId;
+                    await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
                     updateNetlifyStatus();
                     
                     showToast(`Created new site: ${siteUrl}`, 'info');
@@ -1567,14 +1340,14 @@
                 
                 // Step 2: Build file manifest with hashes
                 const files = {};
-                const fileContents = new Map(); // path -> content/blob for uploading
+                const fileContents = new Map();
 
                 // Add index.html
                 const htmlHash = await sha1(content);
                 files['/index.html'] = htmlHash;
                 fileContents.set('/index.html', content);
 
-                // Add _headers file for CORS (enables "Download from Netlify" feature)
+                // Add _headers file for CORS
                 const headersContent = '/*\n  Access-Control-Allow-Origin: *\n';
                 const headersHash = await sha1(headersContent);
                 files['/_headers'] = headersHash;
@@ -1582,7 +1355,7 @@
                 
                 // Add all assets from the assets folder
                 showToast('Scanning assets...', 'info');
-                for await (const entry of state.assetsHandle.values()) {
+                for await (const entry of assetsHandle.values()) {
                     if (entry.kind === 'file') {
                         const file = await entry.getFile();
                         const buffer = await file.arrayBuffer();
@@ -1592,7 +1365,7 @@
                     }
                 }
                 
-                // Step 3: Create a deploy with file digest (tells Netlify what files we have)
+                // Step 3: Create a deploy with file digest
                 const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
                     method: 'POST',
                     headers: {
@@ -1613,14 +1386,12 @@
                     siteUrl = deployData.ssl_url || deployData.url || `https://${deployData.subdomain}.netlify.app`;
                 }
                 
-                // Step 4: Upload files that Netlify needs (check required array)
+                // Step 4: Upload files that Netlify needs
                 const required = deployData.required || [];
-                const totalToUpload = required.length;
                 let uploadedCount = 0;
                 
                 for (const [path, hash] of Object.entries(files)) {
                     if (required.includes(hash)) {
-                        const fileContent = fileContents.get(path);
                         const uploadResponse = await fetch(
                             `https://api.netlify.com/api/v1/deploys/${deployId}/files${path}`,
                             {
@@ -1629,18 +1400,17 @@
                                     'Authorization': `Bearer ${token}`,
                                     'Content-Type': 'application/octet-stream',
                                 },
-                                body: fileContent,
+                                body: fileContents.get(path),
                             }
                         );
                         
                         if (!uploadResponse.ok) {
-                            const errorText = await uploadResponse.text();
-                            throw new Error(`Failed to upload ${path}: ${errorText}`);
+                            throw new Error(`Failed to upload ${path}`);
                         }
                         
                         uploadedCount++;
-                        if (totalToUpload > 1) {
-                            showToast(`Uploading... (${uploadedCount}/${totalToUpload})`, 'info');
+                        if (required.length > 1) {
+                            showToast(`Uploading... (${uploadedCount}/${required.length})`, 'info');
                         }
                     }
                 }
@@ -1662,80 +1432,21 @@
             }
         }
 
-        // SHA1 hash for text content
+        // SHA1 hash helpers
         async function sha1(message) {
             const msgBuffer = new TextEncoder().encode(message);
             const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
         
-        // SHA1 hash for binary content (ArrayBuffer)
         async function sha1Binary(buffer) {
             const hashBuffer = await crypto.subtle.digest('SHA-1', buffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
         // ============================================
         // Download from Netlify
         // ============================================
-
-        // Extract asset URLs from HTML content
-        function extractAssetUrls(html, baseUrl) {
-            const assets = [];
-            const baseUrlObj = new URL(baseUrl);
-            const seenPaths = new Set();
-
-            // Pattern 1: ./assets/filename references
-            const relativeRegex = /\.\/assets\/([^"'\s)]+)/g;
-            let match;
-            while ((match = relativeRegex.exec(html)) !== null) {
-                const localPath = `./assets/${match[1]}`;
-                if (!seenPaths.has(localPath)) {
-                    seenPaths.add(localPath);
-                    assets.push({
-                        localPath,
-                        fetchUrl: new URL(`/assets/${match[1]}`, baseUrl).href
-                    });
-                }
-            }
-
-            // Pattern 2: Absolute URLs with /assets/ path on same domain
-            const absoluteRegex = new RegExp(
-                baseUrlObj.origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/assets/([^"\'\\s)]+)',
-                'g'
-            );
-            while ((match = absoluteRegex.exec(html)) !== null) {
-                const localPath = `./assets/${match[1]}`;
-                if (!seenPaths.has(localPath)) {
-                    seenPaths.add(localPath);
-                    assets.push({
-                        localPath,
-                        fetchUrl: match[0]
-                    });
-                }
-            }
-
-            return assets;
-        }
-
-        // Normalize asset paths in HTML (convert absolute to relative)
-        function normalizeAssetPaths(html, baseUrl) {
-            let normalized = html;
-            const baseUrlObj = new URL(baseUrl);
-
-            // Replace absolute URLs with relative ./assets/ paths
-            const absoluteRegex = new RegExp(
-                baseUrlObj.origin.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/assets/',
-                'g'
-            );
-            normalized = normalized.replace(absoluteRegex, './assets/');
-
-            return normalized;
-        }
-
-        // Download site from Netlify and open for editing
         async function downloadFromNetlify() {
             if (!state.netlifyConfig?.token || !state.netlifyConfig?.siteId) {
                 showToast('Please configure Netlify with a Site ID first', 'error');
@@ -1746,17 +1457,16 @@
             const siteId = state.netlifyConfig.siteId;
 
             try {
-                elements.btnDownloadNetlify.disabled = true;
+                $('btn-download-netlify').disabled = true;
 
                 // Step 1: Get or select project folder
-                let dirHandle = await loadDirectoryHandle();
+                let dirHandle = await idb.load();
                 if (!dirHandle) {
                     showToast('Select a folder to save the project...', 'info');
                     dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                    await saveDirectoryHandle(dirHandle);
-                    elements.projectFolder.value = dirHandle.name;
+                    await idb.save(dirHandle);
+                    $('project-folder').value = dirHandle.name;
                 } else {
-                    // Request permission for existing handle
                     const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
                     if (permission !== 'granted') {
                         throw new Error('Permission denied for project folder');
@@ -1787,7 +1497,6 @@
                 }
                 const files = await filesResponse.json();
 
-                // Separate index.html and assets
                 const indexFile = files.find(f => f.path === '/index.html');
                 const assetFiles = files.filter(f => f.path.startsWith('/assets/'));
                 const remoteAssetNames = new Set(assetFiles.map(f => f.path.replace('/assets/', '')));
@@ -1796,38 +1505,25 @@
                     throw new Error('No index.html found on the deployed site.');
                 }
 
-                // Step 4: Download index.html from the public URL
+                // Step 4: Download index.html
                 showToast('Downloading index.html...', 'info');
-                let htmlResponse;
-                try {
-                    htmlResponse = await fetch(`${siteUrl}/index.html`);
-                } catch (fetchErr) {
-                    // CORS error - provide helpful message
-                    throw new Error(
-                        'CORS blocked. Add a _headers file to your site with:\n' +
-                        '/*\n  Access-Control-Allow-Origin: *\n\n' +
-                        'Then redeploy to enable downloads.'
-                    );
-                }
+                const htmlResponse = await fetch(`${siteUrl}/index.html`);
                 if (!htmlResponse.ok) {
                     throw new Error(`Failed to download index.html: ${htmlResponse.status}`);
                 }
-                let html = await htmlResponse.text();
+                const html = await htmlResponse.text();
 
-                // Step 5: Download assets from public URLs
+                // Step 5: Download assets
                 const assetBlobs = new Map();
                 if (assetFiles.length > 0) {
                     showToast(`Downloading ${assetFiles.length} assets...`, 'info');
                     let downloaded = 0;
 
-                    const downloadAsset = async (file) => {
+                    await Promise.all(assetFiles.map(async (file) => {
                         try {
-                            // file.path is like /assets/image.jpg
                             const response = await fetch(`${siteUrl}${file.path}`);
                             if (response.ok) {
-                                const blob = await response.blob();
-                                // Store with local path format ./assets/filename
-                                assetBlobs.set('.' + file.path, blob);
+                                assetBlobs.set('.' + file.path, await response.blob());
                             }
                         } catch (err) {
                             console.warn(`Failed to download asset: ${file.path}`, err);
@@ -1836,37 +1532,26 @@
                         if (downloaded % 3 === 0 || downloaded === assetFiles.length) {
                             showToast(`Downloading assets... (${downloaded}/${assetFiles.length})`, 'info');
                         }
-                    };
-
-                    await Promise.all(assetFiles.map(downloadAsset));
+                    }));
                 }
 
-                // Step 6: Write to folder (with sync - delete stale files)
+                // Step 6: Write to folder (sync - delete stale files)
                 showToast('Syncing files...', 'info');
 
-                // Write index.html
                 const htmlHandle = await dirHandle.getFileHandle('index.html', { create: true });
                 const htmlWritable = await htmlHandle.createWritable();
                 await htmlWritable.write(html);
                 await htmlWritable.close();
 
-                // Create/get assets folder
                 const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
 
-                // Delete local assets that don't exist on remote (full sync)
-                const localAssetNames = [];
+                // Delete local assets that don't exist on remote
                 for await (const entry of assetsHandle.values()) {
-                    if (entry.kind === 'file') {
-                        localAssetNames.push(entry.name);
-                    }
-                }
-                for (const localName of localAssetNames) {
-                    if (!remoteAssetNames.has(localName)) {
+                    if (entry.kind === 'file' && !remoteAssetNames.has(entry.name)) {
                         try {
-                            await assetsHandle.removeEntry(localName);
-                            console.log(`Deleted stale asset: ${localName}`);
+                            await assetsHandle.removeEntry(entry.name);
                         } catch (err) {
-                            console.warn(`Failed to delete stale asset: ${localName}`, err);
+                            console.warn(`Failed to delete stale asset: ${entry.name}`, err);
                         }
                     }
                 }
@@ -1882,47 +1567,8 @@
 
                 showToast('Sync complete! Opening project...', 'success');
 
-                // Step 7: Open the project
-                // Revoke old blob URLs before clearing
-                for (const url of state.assetBlobUrls.values()) {
-                    URL.revokeObjectURL(url);
-                }
-
-                state.dirHandle = dirHandle;
-                state.assetsHandle = assetsHandle;
-                state.fileHandle = await dirHandle.getFileHandle('index.html');
-                state.assetRefs.clear();
-                state.pendingDeletes.clear();
-                state.assetBlobUrls.clear();
-
-                // Load all assets as blob URLs for preview rendering
-                for await (const entry of assetsHandle.values()) {
-                    if (entry.kind === 'file') {
-                        const file = await entry.getFile();
-                        const blobUrl = URL.createObjectURL(file);
-                        state.assetBlobUrls.set(entry.name, blobUrl);
-                    }
-                }
-
-                // Read and render
-                const file = await state.fileHandle.getFile();
-                const content = await file.text();
-                state.originalContent = content;
-                state.hasUnsavedChanges = false;
-
-                scanAssetReferences(content);
-
-                elements.fileName.textContent = dirHandle.name;
-                elements.fileName.style.display = 'block';
-                elements.unsavedIndicator.style.display = 'none';
-                elements.btnSave.disabled = false;
-                elements.emptyState.style.display = 'none';
-                elements.previewWrapper.style.display = 'block';
-
-                renderPreview(content);
-                updateDeployButtons();
-
-                showToast(`Synced from Netlify: ${dirHandle.name}`, 'success');
+                // Step 7: Open the project using the unified openProject function
+                await openProject(dirHandle);
 
             } catch (err) {
                 if (err.name !== 'AbortError') {
@@ -1938,73 +1584,67 @@
         // Deploy Button State
         // ============================================
         function updateDeployButtons() {
-            const hasProject = !!state.fileHandle && !!state.dirHandle;
-            const netlifyReady = hasProject && state.netlifyConfig && state.netlifyConfig.token;
+            const { fileHandle, dirHandle } = state.project;
+            const hasProject = !!fileHandle && !!dirHandle;
+            const netlifyReady = hasProject && state.netlifyConfig?.token;
             const canDownload = state.netlifyConfig?.token && state.netlifyConfig?.siteId;
 
-            elements.btnDeployNetlify.disabled = !netlifyReady;
-            elements.btnDownloadNetlify.disabled = !canDownload;
+            $('btn-deploy-netlify').disabled = !netlifyReady;
+            $('btn-download-netlify').disabled = !canDownload;
         }
 
         // ============================================
         // Event Listeners
         // ============================================
-        elements.btnOpen.addEventListener('click', openProject);
-        elements.btnOpenEmpty.addEventListener('click', openProject);
-        elements.btnSave.addEventListener('click', saveFile);
-        elements.btnSettings.addEventListener('click', () => {
-            elements.settingsModal.classList.add('active');
-        });
-        elements.settingsClose.addEventListener('click', () => {
-            elements.settingsModal.classList.remove('active');
-        });
-        elements.settingsCancel.addEventListener('click', () => {
-            elements.settingsModal.classList.remove('active');
-        });
-        elements.settingsSave.addEventListener('click', async () => {
+        $('btn-open').addEventListener('click', () => openProject());
+        $('btn-open-empty').addEventListener('click', () => openProject());
+        $('btn-save').addEventListener('click', saveFile);
+        $('btn-settings').addEventListener('click', () => $('settings-modal').classList.add('active'));
+        $('settings-close').addEventListener('click', () => closeModal('settings-modal'));
+        $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
+        $('settings-save').addEventListener('click', async () => {
             await saveNetlifyConfig();
-            elements.settingsModal.classList.remove('active');
+            closeModal('settings-modal');
             showToast('Configuration saved', 'success');
         });
-        elements.btnSelectFolder.addEventListener('click', selectProjectFolder);
-        elements.btnDeployNetlify.addEventListener('click', deployToNetlify);
-        elements.btnDownloadNetlify.addEventListener('click', downloadFromNetlify);
+        $('btn-select-folder').addEventListener('click', selectProjectFolder);
+        $('btn-deploy-netlify').addEventListener('click', deployToNetlify);
+        $('btn-download-netlify').addEventListener('click', downloadFromNetlify);
 
         // Viewport mode buttons
-        elements.viewportDesktop.addEventListener('click', () => setViewportMode('desktop'));
-        elements.viewportTablet.addEventListener('click', () => setViewportMode('tablet'));
-        elements.viewportPhone.addEventListener('click', () => setViewportMode('phone'));
+        $('viewport-desktop').addEventListener('click', () => setViewportMode('desktop'));
+        $('viewport-tablet').addEventListener('click', () => setViewportMode('tablet'));
+        $('viewport-phone').addEventListener('click', () => setViewportMode('phone'));
 
         // Link modal events
-        elements.linkClose.addEventListener('click', () => {
-            elements.linkModal.classList.remove('active');
-            state.currentLinkElement = null;
+        $('link-close').addEventListener('click', () => {
+            closeModal('link-modal');
+            state.ui.currentLinkElement = null;
         });
-        elements.linkCancel.addEventListener('click', () => {
-            elements.linkModal.classList.remove('active');
-            state.currentLinkElement = null;
+        $('link-cancel').addEventListener('click', () => {
+            closeModal('link-modal');
+            state.ui.currentLinkElement = null;
         });
-        elements.linkSave.addEventListener('click', () => {
-            if (state.currentLinkElement) {
-                state.currentLinkElement.textContent = elements.linkText.value;
-                state.currentLinkElement.setAttribute('href', elements.linkUrl.value || '#');
+        $('link-save').addEventListener('click', () => {
+            if (state.ui.currentLinkElement) {
+                state.ui.currentLinkElement.textContent = $('link-text').value;
+                state.ui.currentLinkElement.setAttribute('href', $('link-url').value || '#');
                 markUnsaved();
                 showToast('Link updated', 'success');
             }
-            elements.linkModal.classList.remove('active');
-            state.currentLinkElement = null;
+            closeModal('link-modal');
+            state.ui.currentLinkElement = null;
         });
-        elements.linkModal.addEventListener('click', (e) => {
-            if (e.target === elements.linkModal) {
-                elements.linkModal.classList.remove('active');
-                state.currentLinkElement = null;
+        $('link-modal').addEventListener('click', (e) => {
+            if (e.target === $('link-modal')) {
+                closeModal('link-modal');
+                state.ui.currentLinkElement = null;
             }
         });
-        // Allow Enter to save link
-        elements.linkUrl.addEventListener('keydown', (e) => {
+        $('link-url').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                elements.linkSave.click();
+                $('link-save').click();
             }
         });
 
@@ -2012,14 +1652,14 @@
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                if (state.fileHandle) saveFile();
+                if (state.project.fileHandle) saveFile();
             }
         });
 
         // Click outside modal to close
-        elements.settingsModal.addEventListener('click', (e) => {
-            if (e.target === elements.settingsModal) {
-                elements.settingsModal.classList.remove('active');
+        $('settings-modal').addEventListener('click', (e) => {
+            if (e.target === $('settings-modal')) {
+                closeModal('settings-modal');
             }
         });
 
@@ -2031,26 +1671,21 @@
 
         // ============================================
         // Test Harness Exports
-        // Expose internal functions for Playwright tests
         // ============================================
         window.state = state;
+        window.$ = $;
+        window.idb = idb;
         window.injectEditorStyles = injectEditorStyles;
         window.setupEditableElements = setupEditableElements;
         window.setupToggleableElements = setupToggleableElements;
         window.setupRepeatableSections = setupRepeatableSections;
-        window.buildElementRefs = buildElementRefs;
         window.getEditedContent = getEditedContent;
         window.markUnsaved = markUnsaved;
         window.showToast = showToast;
         window.setViewportMode = setViewportMode;
-        window.extractAssetUrls = extractAssetUrls;
-        window.normalizeAssetPaths = normalizeAssetPaths;
-        window.loadDirectoryHandle = loadDirectoryHandle;
-        window.saveDirectoryHandle = saveDirectoryHandle;
-        window.clearDirectoryHandle = clearDirectoryHandle;
         window.loadProjectConfig = loadProjectConfig;
         window.saveProjectConfig = saveProjectConfig;
-        window.openProjectFromHandle = openProjectFromHandle;
+        window.openProject = openProject;
         window.downloadFromNetlify = downloadFromNetlify;
     </script>
 </body>
