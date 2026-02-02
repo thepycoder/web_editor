@@ -124,7 +124,7 @@
     .header__logo { display: flex; align-items: center; gap: var(--space-sm); }
     .header__logo img { height: 48px; width: auto; }
     .nav { display: none; }
-    @media (min-width: 1500px) {
+    @media (min-width: 1024px) {
       .nav { display: flex; align-items: center; gap: var(--space-lg); }
     }
     .nav__list { display: flex; gap: var(--space-md); }
@@ -159,7 +159,7 @@
       border: none;
       cursor: pointer;
     }
-    @media (min-width: 1500px) { .nav-toggle { display: none; } }
+    @media (min-width: 1024px) { .nav-toggle { display: none; } }
     .nav-toggle span {
       width: 24px;
       height: 2px;
@@ -227,10 +227,9 @@
     .hero {
       display: grid;
       grid-template-columns: 1fr;
-      min-height: calc(100vh - 72px);
       margin-top: 72px;
     }
-    @media (min-width: 1500px) {
+    @media (min-width: 1024px) {
       .hero {
         grid-template-columns: minmax(440px, 38%) 1fr;
       }
@@ -246,7 +245,7 @@
       z-index: 1;
       overflow: hidden;
     }
-    @media (min-width: 1500px) {
+    @media (min-width: 1024px) {
       .hero__card {
         padding: var(--space-3xl) var(--space-2xl);
         order: 0;
@@ -257,7 +256,7 @@
       min-height: 300px;
       order: 0;
     }
-    @media (min-width: 1500px) {
+    @media (min-width: 1024px) {
       .hero__image {
         order: 1;
         min-height: auto;
@@ -280,7 +279,7 @@
       text-wrap: balance;
       font-size: clamp(1.5rem, 4vw + 0.5rem, var(--font-size-5xl));
     }
-    @media (min-width: 1500px) {
+    @media (min-width: 1024px) {
       .hero__title {
         font-size: clamp(1.75rem, 2.5vw + 0.5rem, var(--font-size-5xl));
       }
@@ -341,9 +340,10 @@
       padding: var(--space-3xl) 0;
       background: linear-gradient(180deg, var(--color-background) 0%, var(--color-background-alt) 100%);
     }
-    .team__grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
-    @media (min-width: 768px) { .team__grid { grid-template-columns: repeat(3, 1fr); } }
-    @media (min-width: 992px) { .team__grid { grid-template-columns: repeat(5, 1fr); } }
+    .team__grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: var(--space-md); }
+    @media (min-width: 600px) { .team__grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .team__grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 1200px) { .team__grid { grid-template-columns: repeat(4, 1fr); } }
     .team-card {
       background: var(--color-surface);
       border-radius: var(--radius-lg);
@@ -351,28 +351,43 @@
       text-align: center;
       box-shadow: var(--shadow-sm);
       transition: all var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     }
     .team-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
     .team-card__avatar {
-      width: 100px;
-      height: 100px;
-      margin: 0 auto var(--space-sm);
-      border-radius: 50%;
+      width: 100%;
+      aspect-ratio: 4/5;
+      margin: 0 auto var(--space-md);
+      border-radius: var(--radius-md);
       overflow: hidden;
       background: linear-gradient(135deg, var(--color-background-alt), var(--color-primary-light));
     }
     .team-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
     .team-card__name {
       font-family: var(--font-display);
-      font-size: var(--font-size-base);
+      font-size: var(--font-size-lg);
       margin-bottom: var(--space-xs);
     }
-    .team-card__role { font-size: var(--font-size-sm); color: var(--color-primary); font-weight: 600; }
+    .team-card__role { 
+      font-size: var(--font-size-sm); 
+      color: var(--color-primary); 
+      font-weight: 600; 
+      margin-bottom: var(--space-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .team-card__bio {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
 
     /* Contact */
     .contact { padding: var(--space-3xl) 0; }
     .contact__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); align-items: start; }
-    @media (min-width: 1500px) { .contact__grid { grid-template-columns: 2fr 3fr; } }
+    @media (min-width: 1024px) { .contact__grid { grid-template-columns: 2fr 3fr; } }
     .contact__item {
       display: flex;
       align-items: flex-start;
@@ -465,7 +480,7 @@
       gap: var(--space-md);
       text-align: center;
     }
-    @media (min-width: 1500px) {
+    @media (min-width: 1024px) {
       .footer__inner { flex-direction: row; justify-content: space-between; text-align: left; }
     }
     .footer__logo { display: flex; align-items: center; gap: var(--space-sm); }
@@ -520,7 +535,7 @@
         </div>
       </div>
       <div class="hero__image">
-        <img data-editable-image="" src="./assets/image-1.webp" alt="Team Huisartsenpraktijk De Rotonde in de tuin" width="800" height="600">
+        <img data-editable-image="" src="./assets/DeRotonde-32-cropped.jpg" alt="Team Huisartsenpraktijk De Rotonde in de tuin" width="800" height="600">
       </div>
     </section>
 
@@ -555,38 +570,51 @@
         <div class="team__grid" data-repeatable="">
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/img-1769951854405.webp" alt="Dr. Dries Taelman - Huisarts en Sportarts" width="120" height="120" loading="lazy">
+              <img data-editable-image="" src="./assets/dr-dries-taelman.jpg" alt="Dr. Dries Taelman - Huisarts en Sportarts" width="400" height="500" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Dries Taelman</h3>
             <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
+            <p class="team-card__bio" data-editable="">Ervaren sportarts met oog voor blessurepreventie en revalidatie. Algemene huisartsgeneeskunde voor het hele gezin.</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-3.webp" alt="Dr. Jelle Van Nieuwenhuyze - Huisarts en Sportarts" width="120" height="120" loading="lazy">
+              <img data-editable-image="" src="./assets/dr-jelle-van-nieuwenhuyze.jpg" alt="Dr. Jelle Van Nieuwenhuyze - Huisarts en Sportarts" width="400" height="500" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Jelle Van Nieuwenhuyze</h3>
             <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
+            <p class="team-card__bio" data-editable="">Gespecialiseerd in sportmedische keuringen en begeleiding van sporters. Brede interesse in eerstelijnszorg.</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-4.webp" alt="Dr. Tine Konings - Huisarts" width="120" height="120" loading="lazy">
+              <img data-editable-image="" src="./assets/dr-tine-konings.jpg" alt="Dr. Tine Konings - Huisarts" width="400" height="500" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Tine Konings</h3>
             <p class="team-card__role" data-editable="">Huisarts</p>
+            <p class="team-card__bio" data-editable="">Bijzondere bekwaamheid in preventieve geneeskunde, kindergeneeskunde en gynaecologische opvolging.</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-5.webp" alt="Dr. Robbe De Bruyn - Huisarts" width="120" height="120" loading="lazy">
+              <img data-editable-image="" src="./assets/dr-robbe-de-bruyn.jpg" alt="Dr. Robbe De Bruyn - Huisarts" width="400" height="500" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Dr. Robbe De Bruyn</h3>
             <p class="team-card__role" data-editable="">Huisarts</p>
+            <p class="team-card__bio" data-editable="">Focus op chronische zorg, ouderengeneeskunde en kleine heelkundige ingrepen in de praktijk.</p>
           </div>
           <div class="team-card">
             <div class="team-card__avatar">
-              <img data-editable-image="" src="./assets/image-6.webp" alt="Saartje De Maesschalck - Verpleegkundige" width="120" height="120" loading="lazy">
+              <img data-editable-image="" src="./assets/saartje-de-maesschalck.jpg" alt="Saartje De Maesschalck - Verpleegkundige" width="400" height="500" loading="lazy">
             </div>
             <h3 class="team-card__name" data-editable="">Saartje De Maesschalck</h3>
             <p class="team-card__role" data-editable="">Verpleegkundige</p>
+            <p class="team-card__bio" data-editable="">Verpleegkundige taken waaronder bloednamen, wondzorg, vaccinaties en pre-operatieve onderzoeken.</p>
+          </div>
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/kelly-snoeck.jpg" alt="Kelly Snoeck - Secretariaat" width="400" height="500" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Kelly Snoeck</h3>
+            <p class="team-card__role" data-editable="">Secretariaat</p>
+            <p class="team-card__bio" data-editable="">Onthaal en administratieve ondersteuning. Uw eerste aanspreekpunt aan de telefoon en aan de balie.</p>
           </div>
         </div>
       </div>
