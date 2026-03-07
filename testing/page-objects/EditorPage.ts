@@ -19,9 +19,8 @@ export class EditorPage {
   readonly page: Page;
   
   // Toolbar elements
-  readonly btnOpen: Locator;
   readonly btnDownloadNetlify: Locator;
-  readonly btnOpenEmpty: Locator;
+  readonly btnOpenSettings: Locator;
   readonly btnSave: Locator;
   readonly btnSettings: Locator;
   readonly btnDeployNetlify: Locator;
@@ -46,9 +45,8 @@ export class EditorPage {
     this.page = page;
     
     // Toolbar
-    this.btnOpen = page.locator('#btn-open');
     this.btnDownloadNetlify = page.locator('#btn-download-netlify');
-    this.btnOpenEmpty = page.locator('#btn-open-empty');
+    this.btnOpenSettings = page.locator('#btn-open-settings');
     this.btnSave = page.locator('#btn-save');
     this.btnSettings = page.locator('#btn-settings');
     this.btnDeployNetlify = page.locator('#btn-deploy-netlify');

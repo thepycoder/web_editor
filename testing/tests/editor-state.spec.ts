@@ -67,9 +67,8 @@ test.describe('Editor State', () => {
     await expect(editor.unsavedIndicator).toBeVisible();
   });
 
-  test('open buttons should exist in toolbar and empty state', async () => {
-    await expect(editor.btnOpen).toBeVisible();
-    await expect(editor.btnOpenEmpty).toBeVisible();
+  test('open settings button should exist in empty state', async () => {
+    await expect(editor.btnOpenSettings).toBeVisible();
   });
 
   test('deploy button should be disabled without config', async ({ page }) => {

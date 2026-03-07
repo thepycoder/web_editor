@@ -417,9 +417,6 @@
 <body>
     <header class="toolbar">
         <h1>ProjectWhy CMS</h1>
-        <button class="btn" id="btn-open">
-            <span>📂</span> Open Project
-        </button>
         <button class="btn" id="btn-save" disabled>
             <span>💾</span> Opslaan op Laptop
         </button>
@@ -452,9 +449,9 @@
             <div class="empty-state" id="empty-state">
                 <div class="empty-state-icon">📁</div>
                 <h2>Nog geen project open</h2>
-                <p>Open ofwel een lokale project map, ofwel vul je instellingen in om een bestaande website vanop het internet aan te passen.</p>
-                <button class="btn btn-primary" id="btn-open-empty">
-                    <span>📂</span> Open Project
+                <p>Open de instellingen om een lokale project map te selecteren of een bestaande website vanop het internet aan te passen.</p>
+                <button class="btn btn-primary" id="btn-open-settings">
+                    <span>⚙️</span> Open Instellingen
                 </button>
             </div>
             <div class="preview-wrapper" id="preview-wrapper" style="display: none;">
@@ -1080,6 +1077,44 @@
                 .cms-section-btn.delete:hover {
                     background: #f85149;
                 }
+                
+                /* Formatting Toolbar */
+                .cms-format-toolbar {
+                    position: fixed;
+                    display: none;
+                    gap: 2px;
+                    z-index: 10001;
+                    background: #161b22;
+                    padding: 4px;
+                    border-radius: 6px;
+                    border: 1px solid #30363d;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                }
+                .cms-format-toolbar.active {
+                    display: flex;
+                }
+                .cms-format-btn {
+                    width: 28px;
+                    height: 28px;
+                    border: none;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: transparent;
+                    color: #e6edf3;
+                    transition: background 0.15s ease;
+                }
+                .cms-format-btn:hover {
+                    background: #30363d;
+                }
+                .cms-format-btn.active {
+                    background: #58a6ff;
+                    color: #000;
+                }
             `;
             doc.head.appendChild(style);
         }
@@ -1112,6 +1147,140 @@
                     $('link-text').focus();
                 });
             });
+            
+            // Setup formatting toolbar for editable elements
+            setupFormattingToolbar(doc);
+        }
+        
+        function setupFormattingToolbar(doc) {
+            // Create the toolbar element (one shared toolbar for all editables)
+            let toolbar = doc.getElementById('cms-format-toolbar');
+            if (!toolbar) {
+                toolbar = doc.createElement('div');
+                toolbar.id = 'cms-format-toolbar';
+                toolbar.className = 'cms-format-toolbar';
+                toolbar.innerHTML = `
+                    <button type="button" class="cms-format-btn" data-format="bold" title="Vetgedrukt (Ctrl+B)">
+                        <strong>B</strong>
+                    </button>
+                    <button type="button" class="cms-format-btn" data-format="link" title="Link toevoegen">
+                        🔗
+                    </button>
+                `;
+                doc.body.appendChild(toolbar);
+                
+                // Bold button handler
+                toolbar.querySelector('[data-format="bold"]').addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // Prevent losing selection
+                    doc.execCommand('bold', false, null);
+                    updateToolbarState(doc, toolbar);
+                    markUnsaved();
+                });
+                
+                // Link button handler
+                toolbar.querySelector('[data-format="link"]').addEventListener('mousedown', (e) => {
+                    e.preventDefault(); // Prevent losing selection
+                    const selection = doc.getSelection();
+                    if (!selection || selection.isCollapsed) {
+                        showToast('Selecteer eerst tekst om een link toe te voegen', 'error');
+                        return;
+                    }
+                    
+                    // Check if we're inside an existing link
+                    const range = selection.getRangeAt(0);
+                    const parentLink = range.commonAncestorContainer.parentElement?.closest('a');
+                    const currentUrl = parentLink ? parentLink.getAttribute('href') : '';
+                    
+                    const url = prompt('Voer URL in:', currentUrl || 'https://');
+                    if (url === null) return; // Cancelled
+                    
+                    if (url === '') {
+                        // Remove link
+                        doc.execCommand('unlink', false, null);
+                        showToast('Link verwijderd', 'success');
+                    } else {
+                        doc.execCommand('createLink', false, url);
+                        showToast('Link toegevoegd', 'success');
+                    }
+                    updateToolbarState(doc, toolbar);
+                    markUnsaved();
+                });
+            }
+            
+            // Track selection changes to show/hide toolbar
+            doc.addEventListener('selectionchange', () => {
+                const selection = doc.getSelection();
+                if (!selection || selection.isCollapsed) {
+                    toolbar.classList.remove('active');
+                    return;
+                }
+                
+                // Check if selection is within an editable element
+                const range = selection.getRangeAt(0);
+                const container = range.commonAncestorContainer;
+                const editableParent = container.nodeType === Node.TEXT_NODE 
+                    ? container.parentElement?.closest('[data-editable]')
+                    : container.closest?.('[data-editable]');
+                
+                if (!editableParent) {
+                    toolbar.classList.remove('active');
+                    return;
+                }
+                
+                // Position toolbar above selection
+                const rect = range.getBoundingClientRect();
+                toolbar.style.left = `${rect.left + (rect.width / 2) - 35}px`;
+                toolbar.style.top = `${rect.top - 40}px`;
+                toolbar.classList.add('active');
+                
+                updateToolbarState(doc, toolbar);
+            });
+            
+            // Hide toolbar on click outside
+            doc.addEventListener('mousedown', (e) => {
+                if (!e.target.closest('.cms-format-toolbar') && !e.target.closest('[data-editable]')) {
+                    toolbar.classList.remove('active');
+                }
+            });
+            
+            // Keyboard shortcut for bold (Ctrl+B)
+            doc.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 'b') {
+                    const selection = doc.getSelection();
+                    if (selection && !selection.isCollapsed) {
+                        const range = selection.getRangeAt(0);
+                        const container = range.commonAncestorContainer;
+                        const editableParent = container.nodeType === Node.TEXT_NODE 
+                            ? container.parentElement?.closest('[data-editable]')
+                            : container.closest?.('[data-editable]');
+                        
+                        if (editableParent) {
+                            e.preventDefault();
+                            doc.execCommand('bold', false, null);
+                            updateToolbarState(doc, toolbar);
+                            markUnsaved();
+                        }
+                    }
+                }
+            });
+        }
+        
+        function updateToolbarState(doc, toolbar) {
+            // Update bold button state
+            const boldBtn = toolbar.querySelector('[data-format="bold"]');
+            const isBold = doc.queryCommandState('bold');
+            boldBtn.classList.toggle('active', isBold);
+            
+            // Update link button state
+            const linkBtn = toolbar.querySelector('[data-format="link"]');
+            const selection = doc.getSelection();
+            let isLink = false;
+            if (selection && !selection.isCollapsed) {
+                const range = selection.getRangeAt(0);
+                const parentLink = range.commonAncestorContainer.parentElement?.closest('a');
+                isLink = !!parentLink;
+            }
+            linkBtn.classList.toggle('active', isLink);
         }
 
         function setupToggleableElements(doc) {
@@ -1631,8 +1800,7 @@
         // ============================================
         // Event Listeners
         // ============================================
-        $('btn-open').addEventListener('click', () => openProject());
-        $('btn-open-empty').addEventListener('click', () => openProject());
+        $('btn-open-settings').addEventListener('click', () => $('settings-modal').classList.add('active'));
         $('btn-save').addEventListener('click', saveFile);
         $('btn-settings').addEventListener('click', () => $('settings-modal').classList.add('active'));
         $('settings-close').addEventListener('click', () => closeModal('settings-modal'));
@@ -1712,6 +1880,7 @@
         window.idb = idb;
         window.injectEditorStyles = injectEditorStyles;
         window.setupEditableElements = setupEditableElements;
+        window.setupFormattingToolbar = setupFormattingToolbar;
         window.setupToggleableElements = setupToggleableElements;
         window.setupRepeatableSections = setupRepeatableSections;
         window.getEditedContent = getEditedContent;
