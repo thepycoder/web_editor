@@ -859,7 +859,7 @@
             clone.getElementById('cms-editor-script')?.remove();
             
             // Remove any floating toolbars
-            clone.querySelectorAll('.cms-section-toolbar, .cms-toggle-toolbar').forEach(el => el.remove());
+            clone.querySelectorAll('.cms-section-toolbar, .cms-toggle-toolbar, .cms-format-toolbar').forEach(el => el.remove());
             
             // Handle toggleable elements - add display:none for hidden ones
             clone.querySelectorAll('[data-toggleable]').forEach(el => {
@@ -1153,59 +1153,59 @@
         }
         
         function setupFormattingToolbar(doc) {
-            // Create the toolbar element (one shared toolbar for all editables)
-            let toolbar = doc.getElementById('cms-format-toolbar');
-            if (!toolbar) {
-                toolbar = doc.createElement('div');
-                toolbar.id = 'cms-format-toolbar';
-                toolbar.className = 'cms-format-toolbar';
-                toolbar.innerHTML = `
-                    <button type="button" class="cms-format-btn" data-format="bold" title="Vetgedrukt (Ctrl+B)">
-                        <strong>B</strong>
-                    </button>
-                    <button type="button" class="cms-format-btn" data-format="link" title="Link toevoegen">
-                        🔗
-                    </button>
-                `;
-                doc.body.appendChild(toolbar);
+            // Remove any existing toolbar from template so we always inject our own
+            doc.getElementById('cms-format-toolbar')?.remove();
+            
+            // Create and inject the toolbar (one shared toolbar for all editables)
+            const toolbar = doc.createElement('div');
+            toolbar.id = 'cms-format-toolbar';
+            toolbar.className = 'cms-format-toolbar';
+            toolbar.innerHTML = `
+                <button type="button" class="cms-format-btn" data-format="bold" title="Vetgedrukt (Ctrl+B)">
+                    <strong>B</strong>
+                </button>
+                <button type="button" class="cms-format-btn" data-format="link" title="Link toevoegen">
+                    🔗
+                </button>
+            `;
+            doc.body.appendChild(toolbar);
+            
+            // Bold button handler
+            toolbar.querySelector('[data-format="bold"]').addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevent losing selection
+                doc.execCommand('bold', false, null);
+                updateToolbarState(doc, toolbar);
+                markUnsaved();
+            });
+            
+            // Link button handler
+            toolbar.querySelector('[data-format="link"]').addEventListener('mousedown', (e) => {
+                e.preventDefault(); // Prevent losing selection
+                const selection = doc.getSelection();
+                if (!selection || selection.isCollapsed) {
+                    showToast('Selecteer eerst tekst om een link toe te voegen', 'error');
+                    return;
+                }
                 
-                // Bold button handler
-                toolbar.querySelector('[data-format="bold"]').addEventListener('mousedown', (e) => {
-                    e.preventDefault(); // Prevent losing selection
-                    doc.execCommand('bold', false, null);
-                    updateToolbarState(doc, toolbar);
-                    markUnsaved();
-                });
+                // Check if we're inside an existing link
+                const range = selection.getRangeAt(0);
+                const parentLink = range.commonAncestorContainer.parentElement?.closest('a');
+                const currentUrl = parentLink ? parentLink.getAttribute('href') : '';
                 
-                // Link button handler
-                toolbar.querySelector('[data-format="link"]').addEventListener('mousedown', (e) => {
-                    e.preventDefault(); // Prevent losing selection
-                    const selection = doc.getSelection();
-                    if (!selection || selection.isCollapsed) {
-                        showToast('Selecteer eerst tekst om een link toe te voegen', 'error');
-                        return;
-                    }
-                    
-                    // Check if we're inside an existing link
-                    const range = selection.getRangeAt(0);
-                    const parentLink = range.commonAncestorContainer.parentElement?.closest('a');
-                    const currentUrl = parentLink ? parentLink.getAttribute('href') : '';
-                    
-                    const url = prompt('Voer URL in:', currentUrl || 'https://');
-                    if (url === null) return; // Cancelled
-                    
-                    if (url === '') {
-                        // Remove link
-                        doc.execCommand('unlink', false, null);
-                        showToast('Link verwijderd', 'success');
-                    } else {
-                        doc.execCommand('createLink', false, url);
-                        showToast('Link toegevoegd', 'success');
-                    }
-                    updateToolbarState(doc, toolbar);
-                    markUnsaved();
-                });
-            }
+                const url = prompt('Voer URL in:', currentUrl || 'https://');
+                if (url === null) return; // Cancelled
+                
+                if (url === '') {
+                    // Remove link
+                    doc.execCommand('unlink', false, null);
+                    showToast('Link verwijderd', 'success');
+                } else {
+                    doc.execCommand('createLink', false, url);
+                    showToast('Link toegevoegd', 'success');
+                }
+                updateToolbarState(doc, toolbar);
+                markUnsaved();
+            });
             
             // Track selection changes to show/hide toolbar
             doc.addEventListener('selectionchange', () => {
