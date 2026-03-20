@@ -1,8 +1,44 @@
 #!/usr/bin/env bash
-# WebP exports for De Rotonde template (responsive variants; index.html uses srcset/sizes).
 #
-# Team portraits + map + logo: lossless from assets-hires JPG/PNG (matches your magick -define webp:lossless=true pipeline).
-# Hero + extra mobile/tablet widths: rescale existing WebP with quality 92 — lossless re-encode of photos is often larger than the 1920 master.
+# export-webp-assets.sh — build responsive WebP assets for de-rotonde-template
+#
+# Purpose
+#   Writes width variants used by templates/de-rotonde-template/index.html (img srcset and
+#   picture source srcset). Re-run after changing hires sources or hero/mobile/tablet masters.
+#
+# Requirements
+#   - ImageMagick 7+ (`magick` on PATH)
+#   - ICC profile at SRGB (Ghostscript path below; change the variable if your distro differs)
+#
+# Paths (adjust if the template moves)
+#   SRC — high-res inputs: portrait JPGs, map.png
+#   DST — site assets; existing WebPs are inputs for hero rescales and logo derivatives
+#
+# Output naming
+#   Team:  <base>-web-{320,576,800}w.webp; then cp 800w → <base>-web.webp for stable src URLs
+#   Hero:  cover-desktop-{1200,1600}w.webp; cover-mobile-480w.webp; cover-tablet-{960,1200}w.webp
+#   Map:   map-{640,960,1280,1516}w.webp. This script does not overwrite map.webp; after changing
+#          map.png, copy or re-export map-1516w.webp → map.webp if you want src to match.
+#   Logo:  logo-{256,384}w.webp
+#
+# Encoding
+#   export_webp — JPG/PNG → WebP: embed SRGB, -define webp:lossless=true, -strip metadata.
+#   export_webp_rescale — WebP → smaller WebP: -quality 92. Lossless re-encode of photo WebPs
+#     often produces files larger than the full-size master; q92 keeps size reasonable.
+#
+# Team: source file in SRC → output base name (blur before resize only where noted)
+#   dr-dries-taelman.jpg, dr-robbe-de-bruyn.jpg — Gaussian blur 0x0.8 (team_blur)
+#   de-jelle-van-nieuwenhuyze.jpg → dr-jelle-van-nieuwenhuyze
+#   dr-tinewienetrampoline.jpg    → dr-tine-konings
+#   kelly-snoeck.jpg, saartje-de-maesschalck.jpg — resize only (team_plain)
+#
+# Hero (masters must already exist in DST)
+#   Desktop variants resize cover-web-1774010847279.webp (same crop as the live hero image).
+#   Mobile/tablet extras resize cover-mobile.webp and cover-tablet.webp; this script does not
+#   rebuild those from assets-hires/cover.jpg.
+#
+# Usage: ./export-webp-assets.sh  (from scripts/ or with absolute path)
+#
 set -euo pipefail
 
 SRGB=/usr/share/ghostscript/iccprofiles/srgb.icc
@@ -14,7 +50,7 @@ if [[ ! -f "$SRGB" ]]; then
   exit 1
 fi
 
-# magick INPUT …operations… OUTPUT — lossless, for JPG/PNG sources (portraits, map, logo).
+# Args: input output [magick-read-options…]  (options apply before -profile … -strip output)
 export_webp() {
   local input="$1"
   local output="$2"
@@ -22,7 +58,7 @@ export_webp() {
   magick "$input" "$@" -profile "$SRGB" -define webp:lossless=true -strip "$output"
 }
 
-# WebP → smaller WebP: lossless re-encode of photos explodes file size; use high-quality lossy.
+# Args: input output [magick-read-options…]  — no ICC embed; photo WebP rescale only.
 export_webp_rescale() {
   local input="$1"
   local output="$2"
@@ -48,12 +84,12 @@ team_plain() {
 
 team_blur dr-dries-taelman.jpg dr-dries-taelman
 team_blur dr-robbe-de-bruyn.jpg dr-robbe-de-bruyn
-team_plain de-jelle-van-nieuwenhuyze.jpg dr-jelle-van-nieuwenhuyze
+team_plain dr-jelle-van-nieuwenhuyze.jpg dr-jelle-van-nieuwenhuyze
 team_plain dr-tinewienetrampoline.jpg dr-tine-konings
 team_plain kelly-snoeck.jpg kelly-snoeck
 team_plain saartje-de-maesschalck.jpg saartje-de-maesschalck
 
-# Legacy filenames (800w) expected by older links — copy largest variant
+# Stable img src / deep links: duplicate 800w row as <base>-web.webp
 for base in dr-dries-taelman dr-robbe-de-bruyn dr-jelle-van-nieuwenhuyze dr-tine-konings kelly-snoeck saartje-de-maesschalck; do
   cp -f "$DST/${base}-web-800w.webp" "$DST/${base}-web.webp"
 done
