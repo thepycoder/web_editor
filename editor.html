@@ -697,7 +697,10 @@
                     $('file-name').textContent = dirHandle.name + ' (empty)';
                     $('file-name').style.display = 'block';
                     updateDeployButtons();
-                    showToast('No index.html found in selected folder.', 'error');
+                    showToast(
+                        "This folder has no index.html yet—that's normal for a new project. You can import a site from a URL or add files when you're ready.",
+                        'info'
+                    );
                     return;
                 }
                 
@@ -1113,6 +1116,15 @@
         }
 
         function setupEditableElements(doc) {
+            // Prevent all anchor navigation in the preview (e.g. [data-editable] inside <a>).
+            // Capture + preventDefault only; do not stopPropagation so contenteditable and
+            // [data-editable-link] handlers still run.
+            doc.addEventListener('click', (e) => {
+                if (e.target?.closest?.('a')) {
+                    e.preventDefault();
+                }
+            }, true);
+
             // Setup text editing
             doc.querySelectorAll('[data-editable]').forEach(el => {
                 el.setAttribute('contenteditable', 'true');
