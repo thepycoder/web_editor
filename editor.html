@@ -1458,17 +1458,19 @@
                 const dirHandle = await idb.load();
                 if (!dirHandle) return;
 
-                // Request permission
-                const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
-                if (permission !== 'granted') {
-                    console.log('Permission not granted for auto-open');
+                const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
+                if (permission === 'granted') {
+                    await openProject(dirHandle);
                     return;
                 }
-
-                await openProject(dirHandle);
+                if (permission === 'prompt') {
+                    console.log('Auto-open skipped: folder access needs a click—use Open project folder after load.');
+                    return;
+                }
+                await idb.clear();
+                $('project-folder').value = '';
             } catch (err) {
                 console.log('Auto-open failed:', err.message);
-                // Permission denied or handle invalid - clear it
                 await idb.clear();
                 $('project-folder').value = '';
             }
@@ -1648,6 +1650,19 @@
             return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
+        /** Base URL for fetching deployed files—always *.netlify.app when possible so DNS/CORS issues on custom domains do not break sync. */
+        function netlifyFilesOrigin(siteData) {
+            const slug = (siteData.subdomain || siteData.name || '').toString().trim();
+            if (slug && !slug.includes('://') && !slug.includes('/')) {
+                return `https://${slug}.netlify.app`;
+            }
+            let u = (siteData.ssl_url || siteData.url || '').replace(/\/$/, '');
+            if (u.startsWith('http://')) {
+                u = 'https://' + u.slice('http://'.length);
+            }
+            return u || '';
+        }
+
         // ============================================
         // Download from Netlify
         // ============================================
@@ -1688,7 +1703,10 @@
                     throw new Error('Failed to fetch site info. Check your Site ID and token.');
                 }
                 const siteData = await siteResponse.json();
-                const siteUrl = siteData.ssl_url || siteData.url || `https://${siteData.subdomain}.netlify.app`;
+                const filesOrigin = netlifyFilesOrigin(siteData);
+                if (!filesOrigin) {
+                    throw new Error('Could not resolve Netlify deploy URL (missing subdomain/name).');
+                }
 
                 // Step 3: Get list of all files via Netlify API
                 showToast('Fetching file list...', 'info');
@@ -1711,7 +1729,7 @@
 
                 // Step 4: Download index.html
                 showToast('Downloading index.html...', 'info');
-                const htmlResponse = await fetch(`${siteUrl}/index.html`);
+                const htmlResponse = await fetch(`${filesOrigin}/index.html`);
                 if (!htmlResponse.ok) {
                     throw new Error(`Failed to download index.html: ${htmlResponse.status}`);
                 }
@@ -1725,7 +1743,7 @@
 
                     await Promise.all(assetFiles.map(async (file) => {
                         try {
-                            const response = await fetch(`${siteUrl}${file.path}`);
+                            const response = await fetch(`${filesOrigin}${file.path}`);
                             if (response.ok) {
                                 assetBlobs.set('.' + file.path, await response.blob());
                             }
@@ -1776,7 +1794,11 @@
 
             } catch (err) {
                 if (err.name !== 'AbortError') {
-                    showToast('Download failed: ' + err.message, 'error');
+                    let msg = err.message;
+                    if (msg === 'Failed to fetch' || (err instanceof TypeError && msg.includes('fetch'))) {
+                        msg += ' — open the editor via a local HTTP server (not file://), or add Access-Control-Allow-Origin on Netlify for /index.html and /assets/*';
+                    }
+                    showToast('Download failed: ' + msg, 'error');
                     console.error('Download from Netlify error:', err);
                 }
             } finally {
