@@ -13,7 +13,6 @@ export class SettingsModal {
   readonly selectFolderButton: Locator;
   readonly tokenInput: Locator;
   readonly siteIdInput: Locator;
-  readonly customDomainInput: Locator;
   readonly saveButton: Locator;
   readonly cancelButton: Locator;
   readonly closeButton: Locator;
@@ -25,7 +24,6 @@ export class SettingsModal {
     this.selectFolderButton = page.locator('#btn-select-folder');
     this.tokenInput = page.locator('#netlify-token');
     this.siteIdInput = page.locator('#netlify-siteId');
-    this.customDomainInput = page.locator('#netlify-customDomain');
     this.saveButton = page.locator('#settings-save');
     this.cancelButton = page.locator('#settings-cancel');
     this.closeButton = page.locator('#settings-close');
@@ -89,13 +87,6 @@ export class SettingsModal {
   }
 
   /**
-   * Gets the current custom domain value
-   */
-  async getCustomDomain(): Promise<string> {
-    return this.customDomainInput.inputValue();
-  }
-
-  /**
    * Sets the Netlify token
    * @param token - Netlify personal access token
    */
@@ -112,20 +103,11 @@ export class SettingsModal {
   }
 
   /**
-   * Sets the custom domain
-   * @param domain - Custom subdomain
-   */
-  async setCustomDomain(domain: string) {
-    await this.customDomainInput.fill(domain);
-  }
-
-  /**
    * Fills all Netlify settings at once
    */
-  async fillNetlifySettings(token: string, siteId?: string, customDomain?: string) {
+  async fillNetlifySettings(token: string, siteId?: string) {
     await this.setToken(token);
     if (siteId) await this.setSiteId(siteId);
-    if (customDomain) await this.setCustomDomain(customDomain);
   }
 
   /**

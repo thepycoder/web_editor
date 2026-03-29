@@ -524,11 +524,6 @@
                         <input type="text" id="netlify-siteId" placeholder="Leave empty to create a new site">
                         <small>Use an existing site ID to update it, or leave empty to create a new site each deploy</small>
                     </div>
-                    <div class="form-group">
-                        <label>Custom Domain (optional)</label>
-                        <input type="text" id="netlify-customDomain" placeholder="my-site">
-                        <small>Subdomain for new sites (e.g., "my-site" → my-site.netlify.app)</small>
-                    </div>
                 </div>
                 
             </div>
@@ -681,7 +676,6 @@
                     state.netlifyConfig = {
                         token: parsed.token || '',
                         siteId: parsed.siteId || '',
-                        customDomain: parsed.customDomain || '',
                     };
                     await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
                     localStorage.removeItem('cms-netlify-config');
@@ -689,7 +683,6 @@
 
                 $('netlify-token').value = state.netlifyConfig.token || '';
                 $('netlify-siteId').value = state.netlifyConfig.siteId || '';
-                $('netlify-customDomain').value = state.netlifyConfig.customDomain || '';
                 $('project-folder').value = dirHandle.name;
                 updateNetlifyStatus();
                 
@@ -1433,7 +1426,6 @@
             state.netlifyConfig = {
                 token: $('netlify-token').value,
                 siteId: $('netlify-siteId').value,
-                customDomain: $('netlify-customDomain').value,
             };
             if (state.project.dirHandle) {
                 await saveProjectConfig(state.project.dirHandle, { netlify: state.netlifyConfig });
@@ -1512,18 +1504,13 @@
                 
                 // Step 1: Create a new site if we don't have one
                 if (!siteId) {
-                    const siteBody = {};
-                    if (state.netlifyConfig.customDomain) {
-                        siteBody.name = state.netlifyConfig.customDomain;
-                    }
-                    
                     const createSiteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify(siteBody),
+                        body: JSON.stringify({}),
                     });
                     
                     if (!createSiteResponse.ok) {

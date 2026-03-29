@@ -39,7 +39,6 @@ test.describe('Netlify Configuration', () => {
     await expect(settings.selectFolderButton).toBeVisible();
     await expect(settings.tokenInput).toBeVisible();
     await expect(settings.siteIdInput).toBeVisible();
-    await expect(settings.customDomainInput).toBeVisible();
   });
 
   test('close button should close modal', async () => {
@@ -62,7 +61,7 @@ test.describe('Netlify Configuration', () => {
 
   test('saving config should persist to project file', async ({ page }) => {
     await settings.open();
-    await settings.fillNetlifySettings('test-token-123', 'site-id-456', 'my-domain');
+    await settings.fillNetlifySettings('test-token-123', 'site-id-456');
     await settings.save();
 
     // Check mock config storage
@@ -74,7 +73,6 @@ test.describe('Netlify Configuration', () => {
     expect(savedConfig).toEqual({
       token: 'test-token-123',
       siteId: 'site-id-456',
-      customDomain: 'my-domain',
     });
   });
 
@@ -89,7 +87,7 @@ test.describe('Netlify Configuration', () => {
   test('config values should update state correctly', async ({ page }) => {
     // Save config
     await settings.open();
-    await settings.fillNetlifySettings('persistent-token', 'persistent-site', 'persistent-domain');
+    await settings.fillNetlifySettings('persistent-token', 'persistent-site');
     await settings.save();
 
     // Check state was updated
@@ -101,7 +99,6 @@ test.describe('Netlify Configuration', () => {
     expect(stateConfig).toEqual({
       token: 'persistent-token',
       siteId: 'persistent-site',
-      customDomain: 'persistent-domain',
     });
   });
 
