@@ -74,6 +74,9 @@ export class EditorPage {
   async goto() {
     await this.page.goto('/editor.html');
     await this.page.waitForLoadState('domcontentloaded');
+    await this.page.waitForFunction(() => (window as any).__cmsReady === true, {
+      timeout: 30000,
+    });
   }
 
   /**
@@ -82,6 +85,27 @@ export class EditorPage {
    * 
    * @param htmlContent - The HTML content to inject
    */
+  /**
+   * Force filesystem backend so settings show the folder picker (avoids HTTP-only hidden controls).
+   */
+  async injectFsBackendOnly() {
+    await this.page.evaluate(() => {
+      const win = window as any;
+      win.state = win.state || {};
+      win.state.backend = 'fs';
+      win.state.httpProjectDir = '';
+      win.state.project = win.state.project || {};
+      win.state.project.httpOpen = false;
+      win.state.project.hasIndexHtml = false;
+      if (typeof win.updateLocalServerUI === 'function') {
+        win.updateLocalServerUI();
+      }
+      if (typeof win.updateNetlifyStatus === 'function') {
+        win.updateNetlifyStatus();
+      }
+    });
+  }
+
   async injectTestContent(htmlContent: string) {
     await this.page.evaluate((content) => {
       // Access the internal state object
@@ -89,6 +113,11 @@ export class EditorPage {
       
       // Initialize mock state with new grouped structure
       win.state = win.state || {};
+      win.state.backend = 'fs';
+      win.state.httpProjectDir = '';
+      win.state.project = win.state.project || {};
+      win.state.project.httpOpen = false;
+      win.state.project.hasIndexHtml = false;
       win.state.project = win.state.project || {};
       win.state.project.fileHandle = { name: 'test-index.html' };
       win.state.project.dirHandle = { name: 'test-project' };
@@ -143,6 +172,12 @@ export class EditorPage {
       }
       if (typeof win.buildElementRefs === 'function') {
         win.buildElementRefs(doc);
+      }
+      if (typeof win.updateLocalServerUI === 'function') {
+        win.updateLocalServerUI();
+      }
+      if (typeof win.updateNetlifyStatus === 'function') {
+        win.updateNetlifyStatus();
       }
     }, htmlContent);
     

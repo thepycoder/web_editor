@@ -465,8 +465,9 @@
             <div class="status-dot" id="netlify-status"></div>
             <span id="netlify-status-text">Netlify: Not configured</span>
         </div>
-        <div class="status-item" style="margin-left: auto;">
-            Chrome/Edge recommended for full functionality
+        <div class="status-item" style="margin-left: auto; gap: 12px; align-items: center;">
+            <button type="button" class="btn" id="btn-stop-server" style="display: none; padding: 4px 10px; font-size: 12px;" title="Stop the local ProjectWhy server">Stop local server</button>
+            <span id="browser-hint">Chrome/Edge recommended for full functionality</span>
         </div>
     </footer>
 
@@ -545,11 +546,14 @@
         // State Management
         // ============================================
         const state = {
-            // Project handles
+            backend: 'fs',
+            httpProjectDir: '',
             project: {
                 dirHandle: null,
                 fileHandle: null,
                 assetsHandle: null,
+                httpOpen: false,
+                hasIndexHtml: false,
             },
             // Content state
             content: {
@@ -572,6 +576,153 @@
         // DOM Element Helper (query on demand)
         // ============================================
         const $ = id => document.getElementById(id);
+
+        function netlifyApiBase() {
+            return state.backend === 'http' ? '/api/netlify' : 'https://api.netlify.com';
+        }
+
+        /** GET /api/project/assets must return a JSON array of names; coerce anything else to []. */
+        async function readAssetNameList(res) {
+            if (!res || !res.ok) return [];
+            try {
+                const data = await res.json();
+                return Array.isArray(data) ? data : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function updateLocalServerUI() {
+            const stopBtn = $('btn-stop-server');
+            const selectBtn = $('btn-select-folder');
+            const hint = $('browser-hint');
+            if (state.backend === 'http') {
+                stopBtn.style.display = 'flex';
+                selectBtn.style.display = 'none';
+                if (hint) hint.textContent = 'Local server — close the console window or use Stop to quit.';
+            } else {
+                stopBtn.style.display = 'none';
+                selectBtn.style.display = '';
+                if (hint) hint.textContent = 'Chrome/Edge recommended for full functionality';
+            }
+        }
+
+        async function detectBackend() {
+            window.__cmsReady = false;
+            if (location.protocol === 'file:') {
+                state.backend = 'fs';
+                updateLocalServerUI();
+                tryAutoOpenProject();
+                window.__cmsReady = true;
+                return;
+            }
+            try {
+                const r = await fetch('/api/health');
+                if (!r.ok) throw new Error('no host');
+                const data = await r.json();
+                state.backend = 'http';
+                state.httpProjectDir = data.projectDir || '';
+                updateLocalServerUI();
+                await openProjectHttp();
+            } catch {
+                state.backend = 'fs';
+                updateLocalServerUI();
+                tryAutoOpenProject();
+            }
+            window.__cmsReady = true;
+        }
+
+        async function openProjectHttp() {
+            try {
+                const configRes = await fetch('/api/project/config');
+                const config = await configRes.ok ? await configRes.json() : {};
+                state.netlifyConfig = config.netlify || {};
+
+                const oldConfig = localStorage.getItem('cms-netlify-config');
+                if (oldConfig && !state.netlifyConfig.token) {
+                    const parsed = JSON.parse(oldConfig);
+                    state.netlifyConfig = {
+                        token: parsed.token || '',
+                        siteId: parsed.siteId || '',
+                    };
+                    const merged = { ...config, netlify: state.netlifyConfig };
+                    await fetch('/api/project/config', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(merged),
+                    });
+                    localStorage.removeItem('cms-netlify-config');
+                }
+
+                $('netlify-token').value = state.netlifyConfig.token || '';
+                $('netlify-siteId').value = state.netlifyConfig.siteId || '';
+                $('project-folder').value = state.httpProjectDir || '(local server)';
+                updateNetlifyStatus();
+
+                const idxRes = await fetch('/api/project/index.html');
+                if (!idxRes.ok) {
+                    for (const url of state.assetBlobUrls.values()) {
+                        URL.revokeObjectURL(url);
+                    }
+                    state.assetBlobUrls.clear();
+                    state.project.dirHandle = null;
+                    state.project.fileHandle = null;
+                    state.project.assetsHandle = null;
+                    state.project.httpOpen = true;
+                    state.project.hasIndexHtml = false;
+                    $('file-name').textContent = 'Project (empty)';
+                    $('file-name').style.display = 'block';
+                    $('btn-save').disabled = true;
+                    $('empty-state').style.display = 'flex';
+                    $('preview-wrapper').style.display = 'none';
+                    updateDeployButtons();
+                    showToast(
+                        "This folder has no index.html yet—that's normal for a new project. Add a template or pull from Netlify when you're ready.",
+                        'info'
+                    );
+                    return;
+                }
+
+                const content = await idxRes.text();
+                const assetsRes = await fetch('/api/project/assets');
+                const names = await readAssetNameList(assetsRes);
+
+                for (const url of state.assetBlobUrls.values()) {
+                    URL.revokeObjectURL(url);
+                }
+                state.assetBlobUrls.clear();
+
+                state.project.dirHandle = null;
+                state.project.fileHandle = { name: 'index.html' };
+                state.project.assetsHandle = {};
+                state.project.httpOpen = true;
+                state.project.hasIndexHtml = true;
+
+                for (const name of names) {
+                    const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
+                    if (bRes.ok) {
+                        const blob = await bRes.blob();
+                        state.assetBlobUrls.set(name, URL.createObjectURL(blob));
+                    }
+                }
+
+                state.content.original = content;
+                state.content.hasUnsavedChanges = false;
+
+                $('file-name').textContent = state.httpProjectDir.split(/[/\\]/).filter(Boolean).pop() || 'Project';
+                $('file-name').style.display = 'block';
+                $('unsaved-indicator').style.display = 'none';
+                $('btn-save').disabled = false;
+                $('empty-state').style.display = 'none';
+                $('preview-wrapper').style.display = 'block';
+
+                renderPreview(content);
+                updateDeployButtons();
+                showToast('Opened project (local server)', 'success');
+            } catch (err) {
+                showToast('Failed to open project: ' + err.message, 'error');
+            }
+        }
 
         // ============================================
         // IndexedDB for Directory Handle Persistence
@@ -660,6 +811,8 @@
         // ============================================
         async function openProject(dirHandle = null) {
             try {
+                state.project.httpOpen = false;
+                state.project.hasIndexHtml = false;
                 // If no handle provided, prompt user to select
                 if (!dirHandle) {
                     dirHandle = await window.showDirectoryPicker();
@@ -789,16 +942,34 @@
         // Clean up orphaned assets on save (lazy cleanup)
         async function cleanupOrphanedAssets(doc) {
             const referenced = getReferencedAssets(doc);
+            if (state.backend === 'http') {
+                const res = await fetch('/api/project/assets');
+                const names = await readAssetNameList(res);
+                for (const filename of names) {
+                    if (!referenced.has(filename)) {
+                        try {
+                            await fetch('/api/project/assets/' + encodeURIComponent(filename), { method: 'DELETE' });
+                            if (state.assetBlobUrls.has(filename)) {
+                                URL.revokeObjectURL(state.assetBlobUrls.get(filename));
+                                state.assetBlobUrls.delete(filename);
+                            }
+                        } catch (err) {
+                            console.warn(`Could not delete ${filename}:`, err);
+                        }
+                    }
+                }
+                return;
+            }
             const assetsHandle = state.project.assetsHandle;
             if (!assetsHandle) return;
-            
+
             const toDelete = [];
             for await (const entry of assetsHandle.values()) {
                 if (entry.kind === 'file' && !referenced.has(entry.name)) {
                     toDelete.push(entry.name);
                 }
             }
-            
+
             for (const filename of toDelete) {
                 try {
                     await assetsHandle.removeEntry(filename);
@@ -813,20 +984,41 @@
         }
 
         async function saveFile() {
+            if (state.backend === 'http') {
+                if (!state.project.httpOpen || !state.project.hasIndexHtml) return;
+                try {
+                    const doc = $('preview-frame').contentDocument;
+                    await cleanupOrphanedAssets(doc);
+                    const content = getEditedContent();
+                    const putRes = await fetch('/api/project/index.html', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                        body: content,
+                    });
+                    if (!putRes.ok) {
+                        throw new Error(putRes.statusText || 'save failed');
+                    }
+                    state.content.original = content;
+                    state.content.hasUnsavedChanges = false;
+                    $('unsaved-indicator').style.display = 'none';
+                    showToast('Project saved', 'success');
+                } catch (err) {
+                    showToast('Failed to save project: ' + err.message, 'error');
+                }
+                return;
+            }
             if (!state.project.fileHandle || !state.project.dirHandle) return;
-            
+
             try {
                 const doc = $('preview-frame').contentDocument;
-                
-                // Clean up orphaned assets
+
                 await cleanupOrphanedAssets(doc);
-                
-                // Save HTML content
+
                 const content = getEditedContent();
                 const writable = await state.project.fileHandle.createWritable();
                 await writable.write(content);
                 await writable.close();
-                
+
                 state.content.original = content;
                 state.content.hasUnsavedChanges = false;
                 $('unsaved-indicator').style.display = 'none';
@@ -870,11 +1062,18 @@
                 el.removeAttribute('contenteditable');
             });
             
-            // Convert blob URLs back to ./assets/ paths
             clone.querySelectorAll('[data-editable-image]').forEach(img => {
                 const filename = img.dataset.assetFilename;
                 if (filename) {
                     img.setAttribute('src', `./assets/${filename}`);
+                    const srcset = img.getAttribute('srcset');
+                    if (srcset) {
+                        let s = srcset;
+                        for (const [fn, blobUrl] of state.assetBlobUrls) {
+                            s = s.split(blobUrl).join(`./assets/${fn}`);
+                        }
+                        img.setAttribute('srcset', s);
+                    }
                     img.removeAttribute('data-asset-filename');
                 }
             });
@@ -1387,46 +1586,97 @@
         // ============================================
         // Image Replacement
         // ============================================
+        async function generateResponsiveWebPVariants(file) {
+            const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const stem = `${name}-${Date.now()}`;
+            const bitmap = await createImageBitmap(file);
+            const widths = [320, 576, 800];
+            const blobs = new Map();
+            for (const w of widths) {
+                const scale = w / bitmap.width;
+                const h = Math.max(1, Math.round(bitmap.height * scale));
+                let canvas;
+                let ctx;
+                if (typeof OffscreenCanvas !== 'undefined') {
+                    canvas = new OffscreenCanvas(w, h);
+                    ctx = canvas.getContext('2d');
+                } else {
+                    canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    ctx = canvas.getContext('2d');
+                }
+                ctx.drawImage(bitmap, 0, 0, w, h);
+                let blob;
+                if (typeof canvas.convertToBlob === 'function') {
+                    blob = await canvas.convertToBlob({ type: 'image/webp', quality: 0.92 });
+                } else {
+                    blob = await new Promise((res, rej) => {
+                        canvas.toBlob(b => (b ? res(b) : rej(new Error('toBlob failed'))), 'image/webp', 0.92);
+                    });
+                }
+                blobs.set(`${stem}-${w}w.webp`, blob);
+            }
+            blobs.set(`${stem}.webp`, blobs.get(`${stem}-800w.webp`));
+            return { stem, blobs };
+        }
+
         $('image-input').addEventListener('change', async (e) => {
             const file = e.target.files[0];
             const img = state.ui.currentImageElement;
             if (!file || !img) return;
-            
-            // Check if we have a project open
-            if (!state.project.assetsHandle) {
+
+            const fsReady = state.backend !== 'http' && state.project.assetsHandle;
+            const httpReady = state.backend === 'http' && state.project.httpOpen;
+            if (!fsReady && !httpReady) {
                 showToast('Please open a project folder first', 'error');
                 $('image-input').value = '';
                 state.ui.currentImageElement = null;
                 return;
             }
-            
+
             try {
-                // Generate new filename with timestamp to avoid conflicts
-                // Sanitize filename: lowercase and remove special chars to avoid Netlify issues
-                const ext = file.name.split('.').pop().toLowerCase();
-                const name = file.name.replace(/\.[^/.]+$/, "").toLowerCase().replace(/[^a-z0-9]/g, '-');
-                const newFilename = `${name}-${Date.now()}.${ext}`;
-                
-                // Write new file to assets folder
-                const newFileHandle = await state.project.assetsHandle.getFileHandle(newFilename, { create: true });
-                const writable = await newFileHandle.createWritable();
-                await writable.write(file);
-                await writable.close();
-                
-                // Create blob URL for the new image for preview display
-                const newBlobUrl = URL.createObjectURL(file);
-                state.assetBlobUrls.set(newFilename, newBlobUrl);
-                
-                // Update image src to blob URL for display, store filename for saving
-                img.src = newBlobUrl;
-                img.dataset.assetFilename = newFilename;
-                
+                if (state.backend === 'http') {
+                    const { stem, blobs } = await generateResponsiveWebPVariants(file);
+                    for (const [fname, blob] of blobs) {
+                        const put = await fetch('/api/project/assets/' + encodeURIComponent(fname), {
+                            method: 'PUT',
+                            body: blob,
+                        });
+                        if (!put.ok) throw new Error('Upload failed: ' + fname);
+                        state.assetBlobUrls.set(fname, URL.createObjectURL(blob));
+                    }
+                    const mainFile = `${stem}.webp`;
+                    img.src = state.assetBlobUrls.get(mainFile);
+                    img.dataset.assetFilename = mainFile;
+                    const srcsetParts = [320, 576, 800].map(
+                        w => `${state.assetBlobUrls.get(`${stem}-${w}w.webp`)} ${w}w`
+                    );
+                    img.setAttribute('srcset', srcsetParts.join(', '));
+                } else {
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+                    const newFilename = `${name}-${Date.now()}.${ext}`;
+
+                    const newFileHandle = await state.project.assetsHandle.getFileHandle(newFilename, { create: true });
+                    const writable = await newFileHandle.createWritable();
+                    await writable.write(file);
+                    await writable.close();
+
+                    const newBlobUrl = URL.createObjectURL(file);
+                    state.assetBlobUrls.set(newFilename, newBlobUrl);
+
+                    img.src = newBlobUrl;
+                    img.dataset.assetFilename = newFilename;
+                    img.removeAttribute('srcset');
+                }
+
                 markUnsaved();
                 showToast('Image replaced', 'success');
             } catch (err) {
                 showToast('Failed to replace image: ' + err.message, 'error');
             }
-            
+
             $('image-input').value = '';
             state.ui.currentImageElement = null;
         });
@@ -1439,13 +1689,29 @@
                 token: $('netlify-token').value,
                 siteId: $('netlify-siteId').value,
             };
-            if (state.project.dirHandle) {
+            if (state.backend === 'http') {
+                let cur = {};
+                try {
+                    const r = await fetch('/api/project/config');
+                    if (r.ok) cur = await r.json();
+                } catch { /* ignore */ }
+                cur.netlify = state.netlifyConfig;
+                await fetch('/api/project/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cur),
+                });
+            } else if (state.project.dirHandle) {
                 await saveProjectConfig(state.project.dirHandle, { netlify: state.netlifyConfig });
             }
             updateNetlifyStatus();
         }
 
         async function selectProjectFolder() {
+            if (state.backend === 'http') {
+                showToast('Project folder is fixed when using the ProjectWhy desktop app.', 'info');
+                return;
+            }
             try {
                 const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 await idb.save(dirHandle);
@@ -1458,6 +1724,7 @@
         }
 
         async function tryAutoOpenProject() {
+            if (state.backend === 'http') return;
             try {
                 const dirHandle = await idb.load();
                 if (!dirHandle) return;
@@ -1495,9 +1762,32 @@
         // ============================================
         // Netlify Deployment
         // ============================================
+        async function persistNetlifyConfigToProject() {
+            if (state.backend === 'http') {
+                let cur = {};
+                try {
+                    const r = await fetch('/api/project/config');
+                    if (r.ok) cur = await r.json();
+                } catch { /* ignore */ }
+                cur.netlify = state.netlifyConfig;
+                await fetch('/api/project/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cur),
+                });
+            } else if (state.project.dirHandle) {
+                await saveProjectConfig(state.project.dirHandle, { netlify: state.netlifyConfig });
+            }
+        }
+
         async function deployToNetlify() {
             const { fileHandle, dirHandle, assetsHandle } = state.project;
-            if (!state.netlifyConfig?.token || !fileHandle || !dirHandle) return;
+            const canDeploy =
+                state.netlifyConfig?.token &&
+                (state.backend === 'http'
+                    ? state.project.httpOpen && state.project.hasIndexHtml
+                    : !!fileHandle && !!dirHandle);
+            if (!canDeploy) return;
 
             try {
                 // Auto-save before deploying
@@ -1513,10 +1803,11 @@
                 const token = state.netlifyConfig.token;
                 let siteId = state.netlifyConfig.siteId;
                 let siteUrl = '';
-                
+                const nBase = netlifyApiBase();
+
                 // Step 1: Create a new site if we don't have one
                 if (!siteId) {
-                    const createSiteResponse = await fetch('https://api.netlify.com/api/v1/sites', {
+                    const createSiteResponse = await fetch(`${nBase}/api/v1/sites`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -1524,54 +1815,63 @@
                         },
                         body: JSON.stringify({}),
                     });
-                    
+
                     if (!createSiteResponse.ok) {
                         const errorText = await createSiteResponse.text();
                         throw new Error(`Failed to create site: ${errorText}`);
                     }
-                    
+
                     const siteData = await createSiteResponse.json();
                     siteId = siteData.id;
                     siteUrl = siteData.ssl_url || siteData.url || `https://${siteData.subdomain}.netlify.app`;
-                    
-                    // Save the site ID for future deploys
+
                     state.netlifyConfig.siteId = siteId;
                     $('netlify-siteId').value = siteId;
-                    await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
+                    await persistNetlifyConfigToProject();
                     updateNetlifyStatus();
-                    
+
                     showToast(`Created new site: ${siteUrl}`, 'info');
                 }
-                
+
                 // Step 2: Build file manifest with hashes
                 const files = {};
                 const fileContents = new Map();
 
-                // Add index.html
                 const htmlHash = await sha1(content);
                 files['/index.html'] = htmlHash;
                 fileContents.set('/index.html', content);
 
-                // Add _headers file for CORS
                 const headersContent = '/*\n  Access-Control-Allow-Origin: *\n';
                 const headersHash = await sha1(headersContent);
                 files['/_headers'] = headersHash;
                 fileContents.set('/_headers', headersContent);
-                
-                // Add all assets from the assets folder
+
                 showToast('Scanning assets...', 'info');
-                for await (const entry of assetsHandle.values()) {
-                    if (entry.kind === 'file') {
-                        const file = await entry.getFile();
+                if (state.backend === 'http') {
+                    const listRes = await fetch('/api/project/assets');
+                    const names = await readAssetNameList(listRes);
+                    for (const name of names) {
+                        const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
+                        if (!bRes.ok) continue;
+                        const file = await bRes.blob();
                         const buffer = await file.arrayBuffer();
                         const hash = await sha1Binary(buffer);
-                        files[`/assets/${entry.name}`] = hash;
-                        fileContents.set(`/assets/${entry.name}`, file);
+                        files[`/assets/${name}`] = hash;
+                        fileContents.set(`/assets/${name}`, file);
+                    }
+                } else {
+                    for await (const entry of assetsHandle.values()) {
+                        if (entry.kind === 'file') {
+                            const file = await entry.getFile();
+                            const buffer = await file.arrayBuffer();
+                            const hash = await sha1Binary(buffer);
+                            files[`/assets/${entry.name}`] = hash;
+                            fileContents.set(`/assets/${entry.name}`, file);
+                        }
                     }
                 }
-                
-                // Step 3: Create a deploy with file digest
-                const deployResponse = await fetch(`https://api.netlify.com/api/v1/sites/${siteId}/deploys`, {
+
+                const deployResponse = await fetch(`${nBase}/api/v1/sites/${siteId}/deploys`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -1579,26 +1879,25 @@
                     },
                     body: JSON.stringify({ files }),
                 });
-                
+
                 if (!deployResponse.ok) {
                     const errorText = await deployResponse.text();
                     throw new Error(`Failed to create deploy: ${errorText}`);
                 }
-                
+
                 const deployData = await deployResponse.json();
                 const deployId = deployData.id;
                 if (!siteUrl) {
                     siteUrl = deployData.ssl_url || deployData.url || `https://${deployData.subdomain}.netlify.app`;
                 }
-                
-                // Step 4: Upload files that Netlify needs
+
                 const required = deployData.required || [];
                 let uploadedCount = 0;
-                
+
                 for (const [path, hash] of Object.entries(files)) {
                     if (required.includes(hash)) {
                         const uploadResponse = await fetch(
-                            `https://api.netlify.com/api/v1/deploys/${deployId}/files${path}`,
+                            `${nBase}/api/v1/deploys/${deployId}/files${path}`,
                             {
                                 method: 'PUT',
                                 headers: {
@@ -1608,11 +1907,11 @@
                                 body: fileContents.get(path),
                             }
                         );
-                        
+
                         if (!uploadResponse.ok) {
                             throw new Error(`Failed to upload ${path}`);
                         }
-                        
+
                         uploadedCount++;
                         if (required.length > 1) {
                             showToast(`Uploading... (${uploadedCount}/${required.length})`, 'info');
@@ -1677,25 +1976,27 @@
             try {
                 $('btn-download-netlify').disabled = true;
 
-                // Step 1: Get or select project folder
-                let dirHandle = await idb.load();
-                if (!dirHandle) {
-                    showToast('Select a folder to save the project...', 'info');
-                    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                    await idb.save(dirHandle);
-                    $('project-folder').value = dirHandle.name;
-                } else {
-                    const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
-                    if (permission !== 'granted') {
-                        throw new Error('Permission denied for project folder');
+                let dirHandle = null;
+                if (state.backend !== 'http') {
+                    dirHandle = await idb.load();
+                    if (!dirHandle) {
+                        showToast('Select a folder to save the project...', 'info');
+                        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                        await idb.save(dirHandle);
+                        $('project-folder').value = dirHandle.name;
+                    } else {
+                        const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
+                        if (permission !== 'granted') {
+                            throw new Error('Permission denied for project folder');
+                        }
                     }
                 }
 
                 showToast('Fetching site information...', 'info');
+                const nBase = netlifyApiBase();
 
-                // Step 2: Get site URL from Netlify API
                 const siteResponse = await fetch(
-                    `https://api.netlify.com/api/v1/sites/${siteId}`,
+                    `${nBase}/api/v1/sites/${siteId}`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (!siteResponse.ok) {
@@ -1710,7 +2011,7 @@
                 // Step 3: Get list of all files via Netlify API
                 showToast('Fetching file list...', 'info');
                 const filesResponse = await fetch(
-                    `https://api.netlify.com/api/v1/sites/${siteId}/files`,
+                    `${nBase}/api/v1/sites/${siteId}/files`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (!filesResponse.ok) {
@@ -1756,40 +2057,69 @@
                     }));
                 }
 
-                // Step 6: Write to folder (sync - delete stale files)
                 showToast('Syncing files...', 'info');
 
-                const htmlHandle = await dirHandle.getFileHandle('index.html', { create: true });
-                const htmlWritable = await htmlHandle.createWritable();
-                await htmlWritable.write(html);
-                await htmlWritable.close();
+                if (state.backend === 'http') {
+                    const putHtml = await fetch('/api/project/index.html', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                        body: html,
+                    });
+                    if (!putHtml.ok) throw new Error('Failed to save index.html');
 
-                const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
-
-                // Delete local assets that don't exist on remote
-                for await (const entry of assetsHandle.values()) {
-                    if (entry.kind === 'file' && !remoteAssetNames.has(entry.name)) {
-                        try {
-                            await assetsHandle.removeEntry(entry.name);
-                        } catch (err) {
-                            console.warn(`Failed to delete stale asset: ${entry.name}`, err);
+                    const listRes = await fetch('/api/project/assets');
+                    const localNames = await readAssetNameList(listRes);
+                    for (const name of localNames) {
+                        if (!remoteAssetNames.has(name)) {
+                            try {
+                                await fetch('/api/project/assets/' + encodeURIComponent(name), { method: 'DELETE' });
+                            } catch (err) {
+                                console.warn(`Failed to delete stale asset: ${name}`, err);
+                            }
                         }
                     }
-                }
+                    for (const [localPath, blob] of assetBlobs) {
+                        const filename = localPath.replace('./assets/', '');
+                        const put = await fetch('/api/project/assets/' + encodeURIComponent(filename), {
+                            method: 'PUT',
+                            body: blob,
+                        });
+                        if (!put.ok) throw new Error('Failed to save asset: ' + filename);
+                    }
+                } else {
+                    const htmlHandle = await dirHandle.getFileHandle('index.html', { create: true });
+                    const htmlWritable = await htmlHandle.createWritable();
+                    await htmlWritable.write(html);
+                    await htmlWritable.close();
 
-                // Write downloaded assets
-                for (const [localPath, blob] of assetBlobs) {
-                    const filename = localPath.replace('./assets/', '');
-                    const fileHandle = await assetsHandle.getFileHandle(filename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
+                    const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
+
+                    for await (const entry of assetsHandle.values()) {
+                        if (entry.kind === 'file' && !remoteAssetNames.has(entry.name)) {
+                            try {
+                                await assetsHandle.removeEntry(entry.name);
+                            } catch (err) {
+                                console.warn(`Failed to delete stale asset: ${entry.name}`, err);
+                            }
+                        }
+                    }
+
+                    for (const [localPath, blob] of assetBlobs) {
+                        const filename = localPath.replace('./assets/', '');
+                        const fileHandle = await assetsHandle.getFileHandle(filename, { create: true });
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                    }
                 }
 
                 showToast('Sync complete! Opening project...', 'success');
 
-                // Step 7: Open the project using the unified openProject function
-                await openProject(dirHandle);
+                if (state.backend === 'http') {
+                    await openProjectHttp();
+                } else {
+                    await openProject(dirHandle);
+                }
 
             } catch (err) {
                 if (err.name !== 'AbortError') {
@@ -1809,8 +2139,13 @@
         // Deploy Button State
         // ============================================
         function updateDeployButtons() {
-            const { fileHandle, dirHandle } = state.project;
-            const hasProject = !!fileHandle && !!dirHandle;
+            let hasProject;
+            if (state.backend === 'http') {
+                hasProject = state.project.httpOpen && state.project.hasIndexHtml;
+            } else {
+                const { fileHandle, dirHandle } = state.project;
+                hasProject = !!fileHandle && !!dirHandle;
+            }
             const netlifyReady = hasProject && state.netlifyConfig?.token;
             const canDownload = state.netlifyConfig?.token && state.netlifyConfig?.siteId;
 
@@ -1834,6 +2169,14 @@
         $('btn-select-folder').addEventListener('click', selectProjectFolder);
         $('btn-deploy-netlify').addEventListener('click', deployToNetlify);
         $('btn-download-netlify').addEventListener('click', downloadFromNetlify);
+        $('btn-stop-server').addEventListener('click', async () => {
+            try {
+                await fetch('/api/shutdown', { method: 'POST' });
+                showToast('Local server stopped. You can close this tab.', 'success');
+            } catch (err) {
+                showToast('Server may have stopped (connection closed).', 'info');
+            }
+        });
 
         // Viewport mode buttons
         $('viewport-desktop').addEventListener('click', () => setViewportMode('desktop'));
@@ -1876,7 +2219,11 @@
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                if (state.project.fileHandle) saveFile();
+                if (state.backend === 'http') {
+                    if (state.project.hasIndexHtml) saveFile();
+                } else if (state.project.fileHandle) {
+                    saveFile();
+                }
             }
         });
 
@@ -1891,7 +2238,7 @@
         // Initialize
         // ============================================
         updateNetlifyStatus();
-        tryAutoOpenProject();
+        detectBackend();
 
         // ============================================
         // Test Harness Exports
@@ -1911,7 +2258,12 @@
         window.loadProjectConfig = loadProjectConfig;
         window.saveProjectConfig = saveProjectConfig;
         window.openProject = openProject;
+        window.openProjectHttp = openProjectHttp;
+        window.detectBackend = detectBackend;
         window.downloadFromNetlify = downloadFromNetlify;
+        window.netlifyApiBase = netlifyApiBase;
+        window.updateLocalServerUI = updateLocalServerUI;
+        window.updateNetlifyStatus = updateNetlifyStatus;
     </script>
 </body>
 </html>

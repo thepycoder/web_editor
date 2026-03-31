@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { EditorPage, SettingsModal } from '../page-objects';
-import { TEST_TEMPLATE } from '../helpers';
+import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../helpers';
 
 /**
  * Netlify Configuration Tests
@@ -17,11 +17,15 @@ test.describe('Netlify Configuration', () => {
   let settings: SettingsModal;
 
   test.beforeEach(async ({ page }) => {
+    resetEmptyCmsFixture();
     // Clear localStorage before each test
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
-    
+    await page.waitForLoadState('domcontentloaded');
+    await waitForEditorReady(page);
+
     editor = new EditorPage(page);
     settings = new SettingsModal(page);
     await editor.injectTestContent(TEST_TEMPLATE);

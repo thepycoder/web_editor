@@ -1,0 +1,170 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"syscall"
+	"time"
+
+	"web_editor/internal/envload"
+	"web_editor/internal/httpserver"
+	"web_editor/internal/project"
+	"web_editor/internal/updater"
+)
+
+// App version for update checks (semver, with or without leading "v"). "dev" always fetches latest.
+//
+//	go build -ldflags "-X main.version=1.0.0"
+var version = "dev"
+
+// Optional default GitHub repo when PROJECTWHY_GITHUB_REPO is unset:
+//
+//	go build -ldflags "-X main.bakedGitHubRepo=myorg/projectwhy"
+var bakedGitHubRepo string
+
+// Optional link-time defaults for internal builds, e.g.:
+//
+//	go build -ldflags "-X main.bakedNetlifyToken=TOKEN -X main.bakedNetlifySiteID=ID"
+var bakedNetlifyToken string
+var bakedNetlifySiteID string
+
+func defaultProjectDir() string {
+	if runtime.GOOS == "windows" {
+		if u := os.Getenv("USERPROFILE"); u != "" {
+			return filepath.Join(u, "ProjectWhyWebsite")
+		}
+	}
+	h, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".", "ProjectWhyWebsite")
+	}
+	return filepath.Join(h, "ProjectWhyWebsite")
+}
+
+func loadDotenv() {
+	exe, err := os.Executable()
+	exeDir := ""
+	if err == nil {
+		exeDir = filepath.Dir(exe)
+	}
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = ""
+	}
+	envload.TryLoadFirst(
+		filepath.Join(exeDir, ".env"),
+		filepath.Join(wd, ".env"),
+	)
+}
+
+func resolvedNetlifyDefaults() httpserver.NetlifyDefaults {
+	token := os.Getenv("PROJECTWHY_NETLIFY_TOKEN")
+	if token == "" {
+		token = bakedNetlifyToken
+	}
+	siteID := os.Getenv("PROJECTWHY_NETLIFY_SITE_ID")
+	if siteID == "" {
+		siteID = bakedNetlifySiteID
+	}
+	return httpserver.NetlifyDefaults{Token: token, SiteID: siteID}
+}
+
+func resolveProjectDir(flagPath string) string {
+	if flagPath != "" {
+		return flagPath
+	}
+	if e := os.Getenv("PROJECTWHY_DIR"); e != "" {
+		return e
+	}
+	return defaultProjectDir()
+}
+
+func openBrowser(url string) {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", "", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default:
+		cmd = exec.Command("xdg-open", url)
+	}
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err != nil {
+		log.Printf("open browser: %v", err)
+	}
+}
+
+func main() {
+	listen := flag.String("listen", "127.0.0.1:4070", "HTTP listen address")
+	projectDir := flag.String("project", "", "Project root (default: PROJECTWHY_DIR or home/ProjectWhyWebsite)")
+	noBrowser := flag.Bool("no-browser", false, "Do not open a browser tab")
+	doUpdate := flag.Bool("update", false, "Check GitHub releases, download if newer, then swap binary and restart (set PROJECTWHY_GITHUB_REPO or bake bakedGitHubRepo)")
+	flag.Parse()
+
+	loadDotenv()
+
+	if *doUpdate {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+		defer cancel()
+		exe, err := os.Executable()
+		if err != nil {
+			log.Fatal(err)
+		}
+		owner, repoName, err := updater.ResolveRepo(bakedGitHubRepo)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := updater.RunSelfUpdate(ctx, version, owner, repoName, exe); err != nil {
+			log.Fatal(err)
+		}
+		os.Exit(0)
+	}
+
+	rootPath := resolveProjectDir(*projectDir)
+	pr, err := project.NewRoot(rootPath)
+	if err != nil {
+		log.Fatalf("project dir: %v", err)
+	}
+
+	srv := httpserver.New(pr, editorHTML, *listen, resolvedNetlifyDefaults())
+
+	go func() {
+		host := *listen
+		openURL := "http://" + host + "/editor.html"
+		openURL = strings.Replace(openURL, "//0.0.0.0:", "//127.0.0.1:", 1)
+		time.Sleep(150 * time.Millisecond)
+		if !*noBrowser {
+			openBrowser(openURL)
+		}
+	}()
+
+	fmt.Printf("ProjectWhy %s — http://%s — close this window or press Ctrl+C to stop.\n", version, *listen)
+	fmt.Printf("Project folder: %s\n", pr.Dir())
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sig
+		log.Println("shutting down…")
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(ctx)
+		os.Exit(0)
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
+}

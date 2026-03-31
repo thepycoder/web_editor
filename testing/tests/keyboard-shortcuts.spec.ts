@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { EditorPage, PreviewFrame, LinkModal } from '../page-objects';
-import { TEST_TEMPLATE } from '../helpers';
+import { TEST_TEMPLATE, waitForEditorReady } from '../helpers';
 
 /**
  * Keyboard Shortcuts Tests
@@ -17,8 +17,9 @@ test.describe('Keyboard Shortcuts', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     await page.evaluate(() => localStorage.clear());
-    
+
     editor = new EditorPage(page);
     preview = new PreviewFrame(editor.previewFrame);
     linkModal = new LinkModal(page);
@@ -127,6 +128,7 @@ test.describe('Modal Keyboard Interactions', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     editor = new EditorPage(page);
     preview = new PreviewFrame(editor.previewFrame);
     linkModal = new LinkModal(page);

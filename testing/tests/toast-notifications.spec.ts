@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { EditorPage, PreviewFrame, SettingsModal } from '../page-objects';
-import { TEST_TEMPLATE } from '../helpers';
+import { TEST_TEMPLATE, waitForEditorReady } from '../helpers';
 
 /**
  * Toast Notification Tests
@@ -18,8 +18,9 @@ test.describe('Toast Notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     await page.evaluate(() => localStorage.clear());
-    
+
     editor = new EditorPage(page);
     preview = new PreviewFrame(editor.previewFrame);
     settings = new SettingsModal(page);

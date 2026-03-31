@@ -229,16 +229,15 @@ Then fix any failures by examining the test code and editor implementation.
 
 ### Tests fail to start server
 
-The tests auto-start a server on port 3000. If it's already in use:
+The tests auto-start the Go host on port 3000. If it's already in use:
 
 ```bash
 # Kill existing process on port 3000
 lsof -ti:3000 | xargs kill -9
 
-# Or run server manually
-npm run serve
-# Then in another terminal
-npx playwright test
+# Or run the host manually from the repo root, then in another terminal:
+cd testing && npx playwright test
+# Example: PROJECTWHY_DIR=testing/fixtures/empty-cms-project go run ./cmd/projectwhy -listen 127.0.0.1:3000 -no-browser
 ```
 
 ### Iframe content not loading

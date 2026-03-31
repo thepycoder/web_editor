@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { EditorPage, SettingsModal } from '../page-objects';
-import { TEST_TEMPLATE } from '../helpers';
+import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../helpers';
 
 /**
  * Netlify Download & Sync Tests
@@ -16,8 +16,10 @@ test.describe('Netlify Download & Sync', () => {
   let settings: SettingsModal;
 
   test.beforeEach(async ({ page }) => {
+    resetEmptyCmsFixture();
     // Clear localStorage and IndexedDB before each test
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     await page.evaluate(async () => {
       localStorage.clear();
       // Clear IndexedDB
@@ -27,9 +29,12 @@ test.describe('Netlify Download & Sync', () => {
       }
     });
     await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await waitForEditorReady(page);
 
     editor = new EditorPage(page);
     settings = new SettingsModal(page);
+    await editor.injectFsBackendOnly();
   });
 
   test('download button should be disabled without configuration', async () => {
@@ -93,10 +98,16 @@ test.describe('Netlify Download & Sync', () => {
   });
 
   test('IndexedDB should be used for directory handle storage', async ({ page }) => {
-    // Check that the database and object store are created
+    // Same upgrade path as editor idb: onupgradeneeded creates `handles` (must not omit or store is missing on first open)
     const dbExists = await page.evaluate(async () => {
-      return new Promise((resolve) => {
+      return new Promise<boolean>((resolve) => {
         const request = indexedDB.open('cms-storage', 1);
+        request.onupgradeneeded = (e) => {
+          const db = (e.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('handles')) {
+            db.createObjectStore('handles');
+          }
+        };
         request.onsuccess = () => {
           const db = request.result;
           const hasStore = db.objectStoreNames.contains('handles');
@@ -142,8 +153,11 @@ test.describe('Download Sync Behavior', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await waitForEditorReady(page);
 
     editor = new EditorPage(page);
   });
@@ -229,6 +243,7 @@ test.describe('Auto-open on Startup', () => {
     // At minimum, the IndexedDB functions should be defined
     // (tryAutoOpenProject may not be exposed globally)
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
 
     const dbFunctionsExist = await page.evaluate(() => {
       const win = window as any;
@@ -241,8 +256,11 @@ test.describe('Auto-open on Startup', () => {
 
   test('empty state should show when no project folder is configured', async ({ page }) => {
     await page.goto('/editor.html');
+    await waitForEditorReady(page);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await waitForEditorReady(page);
 
     const editor = new EditorPage(page);
     await expect(editor.emptyState).toBeVisible();
