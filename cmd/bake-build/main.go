@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -59,9 +60,30 @@ func removeGen(path string) {
 	}
 }
 
+// envForGoBuild returns a copy of the environment with GOOS/GOARCH/CGO_ENABLED set for the
+// nested `go build` only. Use this instead of exporting GOOS=… when running `go run ./cmd/bake-build`:
+// that would compile bake-build itself for the target OS and fail with exec format error on Linux/macOS.
+func envForGoBuild(goos, goarch string) []string {
+	var out []string
+	for _, e := range os.Environ() {
+		ue := strings.ToUpper(e)
+		if strings.HasPrefix(ue, "GOOS=") || strings.HasPrefix(ue, "GOARCH=") || strings.HasPrefix(ue, "CGO_ENABLED=") {
+			continue
+		}
+		out = append(out, e)
+	}
+	out = append(out, "GOOS="+goos, "GOARCH="+goarch)
+	if goos != runtime.GOOS || goarch != runtime.GOARCH {
+		out = append(out, "CGO_ENABLED=0")
+	}
+	return out
+}
+
 func main() {
 	envPath := flag.String("env", ".env", "path to .env (relative to module root)")
 	out := flag.String("o", filepath.Join("dist", "projectwhy"), "output binary path (relative to module root unless absolute)")
+	goos := flag.String("goos", runtime.GOOS, "GOOS for the built binary (e.g. windows when cross-compiling from Linux)")
+	goarch := flag.String("goarch", runtime.GOARCH, "GOARCH for the built binary (e.g. amd64)")
 	extraLdflags := flag.String("ldflags", "", "extra -ldflags content (e.g. -X main.version=1.0.0), appended after -s -w")
 	keep := flag.Bool("keep", false, "keep the generated z_baked_env.gen.go file after build")
 	flag.Parse()
@@ -123,7 +145,7 @@ func main() {
 	cmd.Dir = root
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
+	cmd.Env = envForGoBuild(*goos, *goarch)
 	if err := cmd.Run(); err != nil {
 		if !*keep {
 			removeGen(genPath)

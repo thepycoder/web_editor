@@ -38,8 +38,9 @@ go run ./cmd/bake-build -o dist/projectwhy
 - **`-env`** — path to `.env` (default: `.env` at the module root). If the file is missing or has no Netlify keys, the build still succeeds; nothing is baked.
 - **`-ldflags`** — extra linker flags (e.g. `-ldflags "-X main.version=1.0.0"`), appended after `-s -w`.
 - **`-keep`** — keep `cmd/projectwhy/z_baked_env.gen.go` for debugging (normally removed; the file is gitignored).
+- **`-goos` / `-goarch`** — target platform for the **built** `projectwhy` binary (default: host). Use these for cross-compilation. Do **not** set `GOOS`/`GOARCH` in the shell when running `go run ./cmd/bake-build`: that compiles `bake-build` itself for the target OS and fails with `exec format error` on Linux/macOS.
 
-Cross-compile example (Linux amd64): set `GOOS` / `GOARCH` / `CGO_ENABLED` in the environment; the inner `go build` inherits them.
+Cross-compile example (Linux → Windows amd64): `go run ./cmd/bake-build -goos windows -goarch amd64 -o dist/projectwhy.exe` (the helper sets `CGO_ENABLED=0` when the target differs from the host).
 
 At **runtime** (when you did not bake, or use a plain `go build`), credentials are resolved in this order:
 
@@ -69,7 +70,7 @@ The GitHub API is unauthenticated; each launch performs at most one `releases/la
 **Windows release build (static binary):**
 
 ```bash
-GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go run ./cmd/bake-build -o dist/projectwhy.exe
+go run ./cmd/bake-build -goos windows -goarch amd64 -o dist/projectwhy.exe
 ```
 
 Unsigned builds may trigger **Windows SmartScreen** (“Windows protected your PC”): choose *More info* → *Run anyway*, or sign the binary for enterprise rollout.
