@@ -24,16 +24,16 @@ func StagingPath(finalExe string) string {
 	return finalExe + ".new"
 }
 
-// RunSelfUpdate checks GitHub releases/latest, downloads if newer than currentVersion, then schedules swap after exit.
-// currentVersion: use a semver-like tag from -ldflags "-X main.version=1.0.0" or "v1.0.0". "dev" (default) always takes latest release.
-func RunSelfUpdate(ctx context.Context, currentVersion, owner, repo, currentExePath string) error {
+// UpdateAvailable fetches the latest release and reports whether a newer semver than
+// currentVersion exists. currentVersion must be a valid semver and not "dev" or empty.
+func UpdateAvailable(ctx context.Context, currentVersion, owner, repo string) (available bool, latestTag, assetName, downloadURL string, err error) {
 	tag, assets, err := FetchLatestRelease(ctx, owner, repo)
 	if err != nil {
-		return err
+		return false, "", "", "", err
 	}
-	assetName, url, err := PickAssetURL(assets)
+	assetName, downloadURL, err = PickAssetURL(assets)
 	if err != nil {
-		return err
+		return false, "", "", "", err
 	}
 
 	latestRaw := strings.TrimSpace(tag)
@@ -43,33 +43,33 @@ func RunSelfUpdate(ctx context.Context, currentVersion, owner, repo, currentExeP
 	}
 	latest = semver.Canonical(latest)
 	if !semver.IsValid(latest) {
-		return fmt.Errorf("release tag %q is not a valid semver", tag)
+		return false, "", "", "", fmt.Errorf("release tag %q is not a valid semver", tag)
 	}
 
 	curRaw := strings.TrimSpace(currentVersion)
-	isDev := curRaw == "" || strings.EqualFold(curRaw, "dev")
-
-	if !isDev {
-		cur := curRaw
-		if !strings.HasPrefix(cur, "v") {
-			cur = "v" + cur
-		}
-		cur = semver.Canonical(cur)
-		if !semver.IsValid(cur) {
-			return fmt.Errorf("current version %q is not valid semver (use v1.2.3 or build with -ldflags \"-X main.version=1.2.3\")", currentVersion)
-		}
-		if semver.Compare(latest, cur) <= 0 {
-			fmt.Fprintf(os.Stderr, "ProjectWhy is up to date (%s; latest release %s).\n", cur, latest)
-			return nil
-		}
-		fmt.Fprintf(os.Stderr, "Updating %s → %s (asset %s)…\n", cur, latest, assetName)
-	} else {
-		fmt.Fprintf(os.Stderr, "Updating to latest release %s (asset %s)…\n", latest, assetName)
+	if curRaw == "" || strings.EqualFold(curRaw, "dev") {
+		return false, "", "", "", fmt.Errorf("current version is dev or empty")
 	}
+	cur := curRaw
+	if !strings.HasPrefix(cur, "v") {
+		cur = "v" + cur
+	}
+	cur = semver.Canonical(cur)
+	if !semver.IsValid(cur) {
+		return false, "", "", "", fmt.Errorf("current version %q is not valid semver (use v1.2.3 or build with -ldflags \"-X main.version=1.2.3\")", currentVersion)
+	}
+	if semver.Compare(latest, cur) <= 0 {
+		return false, latest, "", "", nil
+	}
+	return true, latest, assetName, downloadURL, nil
+}
 
+// ApplyUpdate downloads the asset and schedules replacement of currentExePath after this process exits.
+// If restartAfter is true, the post-exit script also starts the new binary; otherwise only the swap runs.
+func ApplyUpdate(ctx context.Context, downloadURL, currentExePath string, restartAfter bool) error {
 	stage := StagingPath(currentExePath)
 	_ = os.Remove(stage)
-	if err := Download(ctx, url, stage); err != nil {
+	if err := Download(ctx, downloadURL, stage); err != nil {
 		return fmt.Errorf("download: %w", err)
 	}
 	if runtime.GOOS != "windows" {
@@ -79,10 +79,11 @@ func RunSelfUpdate(ctx context.Context, currentVersion, owner, repo, currentExeP
 	}
 
 	pid := os.Getpid()
-	if err := scheduleReplaceAndRestart(pid, stage, currentExePath); err != nil {
+	if err := scheduleReplace(pid, stage, currentExePath, restartAfter); err != nil {
 		return err
 	}
-
-	fmt.Fprintf(os.Stderr, "Exiting so the update script can replace the binary and restart…\n")
+	if restartAfter {
+		fmt.Fprintf(os.Stderr, "Exiting so the update script can replace the binary and restart…\n")
+	}
 	return nil
 }

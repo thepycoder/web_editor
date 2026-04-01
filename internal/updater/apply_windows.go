@@ -9,9 +9,10 @@ import (
 	"time"
 )
 
-// scheduleReplaceAndRestart writes a batch script, starts it detached, returns immediately.
-// After the process oldPID exits, the script replaces newExePath with finalExePath and restarts finalExePath.
-func scheduleReplaceAndRestart(oldPID int, newExePath, finalExePath string) error {
+// scheduleReplace writes a batch script, starts it detached, returns immediately.
+// After the process oldPID exits, the script replaces newExePath with finalExePath.
+// If restartAfter is true, it also starts finalExePath.
+func scheduleReplace(oldPID int, newExePath, finalExePath string, restartAfter bool) error {
 	newExePath, err := filepath.Abs(newExePath)
 	if err != nil {
 		return err
@@ -39,9 +40,12 @@ goto wait
 :replace
 if exist "%%FINAL%%" del /F /Q "%%FINAL%%"
 move /Y "%%NEWEXE%%" "%%FINAL%%"
-start "" "%%FINAL%%"
-del "%%~f0"
 `, newQ, finalQ, oldPID)
+	if restartAfter {
+		script += fmt.Sprintf("start \"\" \"%%FINAL%%\"\n")
+	}
+	script += `del "%~f0"
+`
 
 	dir := filepath.Dir(finalExePath)
 	tmp, err := os.CreateTemp(dir, "projectwhy-update-*.bat")

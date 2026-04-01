@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 )
 
-// scheduleReplaceAndRestart writes a shell script, starts it detached.
-func scheduleReplaceAndRestart(oldPID int, newExePath, finalExePath string) error {
+// scheduleReplace writes a shell script, starts it detached. If restartAfter is true,
+// the script starts the new binary after swapping; otherwise it only replaces the file.
+func scheduleReplace(oldPID int, newExePath, finalExePath string, restartAfter bool) error {
 	newExePath, err := filepath.Abs(newExePath)
 	if err != nil {
 		return err
@@ -20,6 +21,11 @@ func scheduleReplaceAndRestart(oldPID int, newExePath, finalExePath string) erro
 		return err
 	}
 
+	var tail string
+	if restartAfter {
+		tail = `nohup "$FINAL" >/dev/null 2>&1 &
+`
+	}
 	script := fmt.Sprintf(`#!/bin/sh
 NEW=%q
 FINAL=%q
@@ -28,9 +34,8 @@ while kill -0 "$PID" 2>/dev/null; do sleep 1; done
 rm -f "$FINAL"
 mv -f "$NEW" "$FINAL"
 chmod +x "$FINAL"
-nohup "$FINAL" >/dev/null 2>&1 &
-rm -f "$0"
-`, newExePath, finalExePath, oldPID)
+%srm -f "$0"
+`, newExePath, finalExePath, oldPID, tail)
 
 	dir := filepath.Dir(finalExePath)
 	tmp, err := os.CreateTemp(dir, "projectwhy-update-*.sh")

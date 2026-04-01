@@ -24,7 +24,8 @@ Flags and environment:
 - `-project` — project root; overrides `PROJECTWHY_DIR`.
 - `PROJECTWHY_DIR` — project root when `-project` is not set (default: `%USERPROFILE%\ProjectWhyWebsite` on Windows, `~/ProjectWhyWebsite` elsewhere).
 - `-no-browser` — do not open a browser tab (e.g. CI).
-- `-update` — check your public GitHub repo’s **latest** release; if the tag is newer than the baked version (or you are on `dev`), download the matching asset, exit, then a small script replaces the running binary and restarts it. Set `PROJECTWHY_GITHUB_REPO=owner/repo` or build with `-ldflags "-X main.bakedGitHubRepo=owner/repo"`. Bake a semver with `-ldflags "-X main.version=1.2.3"` so unchanged releases are skipped.
+- `-skip-update-check` — do not contact GitHub on startup (same as `PROJECTWHY_SKIP_UPDATE=1` / `true` / `yes`).
+- **Startup updates** — if the binary is built with a **semver** (`-ldflags "-X main.version=1.2.3"`), not `dev`, and `PROJECTWHY_GITHUB_REPO=owner/repo` or `bakedGitHubRepo` is set, the app checks GitHub’s **latest** release once at launch. When a newer tag exists, it downloads the matching asset, exits, and a small script replaces the binary; **start the app again** to run the new version (no automatic relaunch). `go build` without a version is `dev` and **skips** the GitHub check. If the check fails (offline, API error), the app logs a warning and continues. If no repo is configured, the check is skipped.
 
 **Netlify token and site ID**
 
@@ -63,7 +64,7 @@ Create a [GitHub release](https://docs.github.com/en/repositories/releasing-proj
 - Linux amd64: `projectwhy-linux-amd64`, or `projectwhy`
 - macOS: `projectwhy-darwin-arm64` / `projectwhy-darwin-amd64`, or `projectwhy`
 
-The API is unauthenticated; very heavy polling may hit rate limits.
+The GitHub API is unauthenticated; each launch performs at most one `releases/latest` request when updates are enabled.
 
 **Windows release build (static binary):**
 
