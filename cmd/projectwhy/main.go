@@ -18,18 +18,12 @@ import (
 	"web_editor/internal/envload"
 	"web_editor/internal/httpserver"
 	"web_editor/internal/project"
-	"web_editor/internal/updater"
 )
 
-// App version for update checks (semver, with or without leading "v"). "dev" (default) skips automatic update checks.
+// App version, set at build time:
 //
 //	go build -ldflags "-X main.version=1.0.0"
 var version = "dev"
-
-// Optional default GitHub repo when PROJECTWHY_GITHUB_REPO is unset:
-//
-//	go build -ldflags "-X main.bakedGitHubRepo=myorg/projectwhy"
-var bakedGitHubRepo string
 
 // Optional link-time defaults for internal builds. Prefer baking from .env via:
 //
@@ -114,45 +108,13 @@ func openBrowser(url string) {
 	}
 }
 
-func envSkipUpdateCheck() bool {
-	s := strings.TrimSpace(strings.ToLower(os.Getenv("PROJECTWHY_SKIP_UPDATE")))
-	return s == "1" || s == "true" || s == "yes"
-}
-
 func main() {
 	listen := flag.String("listen", "127.0.0.1:4070", "HTTP listen address")
 	projectDir := flag.String("project", "", "Project root (default: PROJECTWHY_DIR or home/ProjectWhyWebsite)")
 	noBrowser := flag.Bool("no-browser", false, "Do not open a browser tab")
-	skipUpdateCheck := flag.Bool("skip-update-check", false, "Do not check GitHub for updates on startup (also PROJECTWHY_SKIP_UPDATE=1)")
 	flag.Parse()
 
 	loadDotenv(resolveProjectDir(*projectDir))
-
-	if !*skipUpdateCheck && !envSkipUpdateCheck() && !strings.EqualFold(strings.TrimSpace(version), "dev") {
-		owner, repoName, err := updater.ResolveRepo(bakedGitHubRepo)
-		if err == nil {
-			exe, exeErr := os.Executable()
-			if exeErr == nil {
-				ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
-				avail, latestTag, _, downloadURL, uerr := updater.UpdateAvailable(ctx, version, owner, repoName)
-				cancel()
-				if uerr != nil {
-					log.Printf("update check: %v", uerr)
-				} else if avail {
-					fmt.Fprintf(os.Stderr, "Updating ProjectWhy %s → %s…\n", strings.TrimSpace(version), latestTag)
-					ctx2, cancel2 := context.WithTimeout(context.Background(), 15*time.Minute)
-					aerr := updater.ApplyUpdate(ctx2, downloadURL, exe, false)
-					cancel2()
-					if aerr != nil {
-						log.Printf("update failed: %v", aerr)
-					} else {
-						fmt.Fprintf(os.Stderr, "Update installed. Start ProjectWhy again to run the new version.\n")
-						os.Exit(0)
-					}
-				}
-			}
-		}
-	}
 
 	rootPath := resolveProjectDir(*projectDir)
 	pr, err := project.NewRoot(rootPath)

@@ -8,7 +8,7 @@ Because deploying a single page, static website for a bakery or flower shop, doe
 
 ## Desktop host (Windows 11 / single `.exe`)
 
-For locked-down PCs without Python or ImageMagick, use the Go wrapper: it serves the CMS UI from [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) (embedded in the binary) on localhost, reads and writes the project on disk, proxies Netlify’s API (no CORS issues in the browser), and uses a console window plus an optional **Stop local server** action for shutdown.
+For locked-down PCs without Python or ImageMagick, use the Go wrapper: it serves the CMS UI from [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) (embedded in the binary) on localhost, reads and writes the project on disk, proxies Netlify's API (no CORS issues in the browser), and uses a console window plus an optional **Stop local server** action for shutdown.
 
 **Prerequisites:** [Go](https://go.dev/dl/) on your build machine (users only need the built `.exe`).
 
@@ -24,12 +24,10 @@ Flags and environment:
 - `-project` — project root; overrides `PROJECTWHY_DIR`.
 - `PROJECTWHY_DIR` — project root when `-project` is not set (default: `%USERPROFILE%\ProjectWhyWebsite` on Windows, `~/ProjectWhyWebsite` elsewhere).
 - `-no-browser` — do not open a browser tab (e.g. CI).
-- `-skip-update-check` — do not contact GitHub on startup (same as `PROJECTWHY_SKIP_UPDATE=1` / `true` / `yes`).
-- **Startup updates** — if the binary is built with a **semver** (`-ldflags "-X main.version=1.2.3"`), not `dev`, and `PROJECTWHY_GITHUB_REPO=owner/repo` or `bakedGitHubRepo` is set, the app checks GitHub’s **latest** release once at launch. When a newer tag exists, it downloads the matching asset, exits, and a small script replaces the binary; **start the app again** to run the new version (no automatic relaunch). `go build` without a version is `dev` and **skips** the GitHub check. If the check fails (offline, API error), the app logs a warning and continues. If no repo is configured, the check is skipped.
 
 **Netlify token and site ID**
 
-Only [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) is embedded by a plain `go build`. To **bake** `PROJECTWHY_NETLIFY_TOKEN` and `PROJECTWHY_NETLIFY_SITE_ID` from the repo’s `.env` into the binary automatically, use the bake helper (it generates a short-lived `z_baked_env.gen.go`, runs `go build`, then deletes it):
+Only [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) is embedded by a plain `go build`. To **bake** `PROJECTWHY_NETLIFY_TOKEN` and `PROJECTWHY_NETLIFY_SITE_ID` from the repo's `.env` into the binary automatically, use the bake helper (it generates a short-lived `z_baked_env.gen.go`, runs `go build`, then deletes it):
 
 ```bash
 go run ./cmd/bake-build -o dist/projectwhy
@@ -53,19 +51,9 @@ Manual bake without the helper (equivalent when values have no awkward character
 go build -ldflags="-s -w -X main.bakedNetlifyToken=YOUR_TOKEN -X main.bakedNetlifySiteID=YOUR_SITE_ID" -o dist/projectwhy ./cmd/projectwhy
 ```
 
-If the project’s saved config already contains a token or site ID, those are kept; defaults only fill empty fields.
+If the project's saved config already contains a token or site ID, those are kept; defaults only fill empty fields.
 
 **Convenience:** `make build` runs the same as `go run ./cmd/bake-build -o dist/projectwhy` (requires GNU/BSD `make`).
-
-**Self-update release layout**
-
-Create a [GitHub release](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository) (not draft) with a semver tag such as `v1.0.0`, and attach **one** binary whose **file name** matches the running platform, in this order of preference:
-
-- Windows amd64: `projectwhy-windows-amd64.exe`, or `projectwhy.exe`
-- Linux amd64: `projectwhy-linux-amd64`, or `projectwhy`
-- macOS: `projectwhy-darwin-arm64` / `projectwhy-darwin-amd64`, or `projectwhy`
-
-The GitHub API is unauthenticated; each launch performs at most one `releases/latest` request when updates are enabled.
 
 **Windows release build (static binary):**
 
@@ -73,7 +61,7 @@ The GitHub API is unauthenticated; each launch performs at most one `releases/la
 go run ./cmd/bake-build -goos windows -goarch amd64 -o dist/projectwhy.exe
 ```
 
-Unsigned builds may trigger **Windows SmartScreen** (“Windows protected your PC”): choose *More info* → *Run anyway*, or sign the binary for enterprise rollout.
+Unsigned builds may trigger **Windows SmartScreen** ("Windows protected your PC"): choose *More info* → *Run anyway*, or sign the binary for enterprise rollout.
 
 **Stopping the server:** close the console window, press Ctrl+C, or use **Stop local server** in the editor status bar (HTTP mode only; may report a connection error after exit, which is normal).
 
