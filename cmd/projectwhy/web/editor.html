@@ -377,21 +377,28 @@
             right: 20px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
+            max-width: min(320px, calc(100vw - 40px));
             z-index: 1001;
         }
 
         .toast {
-            padding: 12px 16px;
+            padding: 10px 14px;
             border-radius: 8px;
             background: var(--bg-panel);
             border: 1px solid var(--border);
-            font-size: 13px;
+            font-size: 12px;
+            line-height: 1.35;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            align-items: flex-start;
+            gap: 8px;
             animation: slideIn 0.2s ease;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .toast > span:last-child {
+            min-width: 0;
+            word-break: break-word;
         }
 
         .toast.success {
@@ -612,7 +619,7 @@
             if (location.protocol === 'file:') {
                 state.backend = 'fs';
                 updateLocalServerUI();
-                tryAutoOpenProject();
+                await tryAutoOpenProject();
                 window.__cmsReady = true;
                 return;
             }
@@ -627,7 +634,7 @@
             } catch {
                 state.backend = 'fs';
                 updateLocalServerUI();
-                tryAutoOpenProject();
+                await tryAutoOpenProject();
             }
             window.__cmsReady = true;
         }
@@ -775,15 +782,77 @@
         // ============================================
         // Toast Notifications
         // ============================================
-        function showToast(message, type = 'info') {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.innerHTML = `
-                <span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span>
+        const TOAST_MAX_STACK = 3;
+        const TOAST_DURATION_MS = 4000;
+        const toastMergeKeys = new Map();
+
+        function toastIcon(type) {
+            return type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+        }
+
+        function toastInnerHTML(message, type) {
+            return `
+                <span>${toastIcon(type)}</span>
                 <span>${message}</span>
             `;
-            $('toast-container').appendChild(toast);
-            setTimeout(() => toast.remove(), 4000);
+        }
+
+        function removeToastEl(el) {
+            if (!el) return;
+            const key = el.dataset.mergeKey;
+            if (key) {
+                const entry = toastMergeKeys.get(key);
+                if (entry && entry.timeoutId) clearTimeout(entry.timeoutId);
+                toastMergeKeys.delete(key);
+            }
+            el.remove();
+        }
+
+        /** Stops a merge-key toast without showing a new one (e.g. before a final success toast). */
+        function dismissMergeToast(mergeKey) {
+            const entry = toastMergeKeys.get(mergeKey);
+            if (entry && entry.element && entry.element.isConnected) {
+                clearTimeout(entry.timeoutId);
+                toastMergeKeys.delete(mergeKey);
+                entry.element.remove();
+            }
+        }
+
+        /**
+         * @param {string} message
+         * @param {'info'|'success'|'error'} [type]
+         * @param {{ mergeKey?: string }} [options] — same mergeKey updates one toast in place (batch progress)
+         */
+        function showToast(message, type = 'info', options = {}) {
+            const mergeKey = options.mergeKey;
+            const container = $('toast-container');
+            const html = toastInnerHTML(message, type);
+
+            if (mergeKey) {
+                const existing = toastMergeKeys.get(mergeKey);
+                if (existing && existing.element.isConnected) {
+                    clearTimeout(existing.timeoutId);
+                    existing.element.innerHTML = html;
+                    existing.element.className = `toast ${type}`;
+                    existing.timeoutId = setTimeout(() => removeToastEl(existing.element), TOAST_DURATION_MS);
+                    return;
+                }
+            }
+
+            while (container.children.length >= TOAST_MAX_STACK) {
+                removeToastEl(container.firstChild);
+            }
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            if (mergeKey) toast.dataset.mergeKey = mergeKey;
+            toast.innerHTML = html;
+            container.appendChild(toast);
+
+            const timeoutId = setTimeout(() => removeToastEl(toast), TOAST_DURATION_MS);
+            if (mergeKey) {
+                toastMergeKeys.set(mergeKey, { element: toast, timeoutId });
+            }
         }
 
         // ============================================
@@ -869,6 +938,7 @@
                 state.project.dirHandle = dirHandle;
                 state.project.assetsHandle = assetsHandle;
                 state.project.fileHandle = fileHandle;
+                state.project.hasIndexHtml = true;
                 state.assetBlobUrls.clear();
                 
                 // Load all assets as blob URLs for preview rendering
@@ -1792,11 +1862,11 @@
             try {
                 // Auto-save before deploying
                 if (state.content.hasUnsavedChanges) {
-                    showToast('Saving changes...', 'info');
+                    showToast('Saving changes...', 'info', { mergeKey: 'netlify-deploy' });
                     await saveFile();
                 }
 
-                showToast('Starting Netlify deployment...', 'info');
+                showToast('Starting Netlify deployment...', 'info', { mergeKey: 'netlify-deploy' });
                 $('btn-deploy-netlify').disabled = true;
 
                 const content = getEditedContent();
@@ -1830,7 +1900,7 @@
                     await persistNetlifyConfigToProject();
                     updateNetlifyStatus();
 
-                    showToast(`Created new site: ${siteUrl}`, 'info');
+                    showToast(`Created new site: ${siteUrl}`, 'info', { mergeKey: 'netlify-deploy' });
                 }
 
                 // Step 2: Build file manifest with hashes
@@ -1846,7 +1916,7 @@
                 files['/_headers'] = headersHash;
                 fileContents.set('/_headers', headersContent);
 
-                showToast('Scanning assets...', 'info');
+                showToast('Scanning assets...', 'info', { mergeKey: 'netlify-deploy' });
                 if (state.backend === 'http') {
                     const listRes = await fetch('/api/project/assets');
                     const names = await readAssetNameList(listRes);
@@ -1914,11 +1984,12 @@
 
                         uploadedCount++;
                         if (required.length > 1) {
-                            showToast(`Uploading... (${uploadedCount}/${required.length})`, 'info');
+                            showToast(`Uploading... (${uploadedCount}/${required.length})`, 'info', { mergeKey: 'netlify-deploy' });
                         }
                     }
                 }
-                
+
+                dismissMergeToast('netlify-deploy');
                 showToast(`Deployed to Netlify!`, 'success');
                 
                 // Open the deployed site
@@ -1929,6 +2000,7 @@
                 }, 500);
                 
             } catch (err) {
+                dismissMergeToast('netlify-deploy');
                 showToast('Netlify deployment failed: ' + err.message, 'error');
                 console.error('Netlify deployment error:', err);
             } finally {
@@ -1980,7 +2052,7 @@
                 if (state.backend !== 'http') {
                     dirHandle = await idb.load();
                     if (!dirHandle) {
-                        showToast('Select a folder to save the project...', 'info');
+                        showToast('Select a folder to save the project...', 'info', { mergeKey: 'netlify-pull' });
                         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                         await idb.save(dirHandle);
                         $('project-folder').value = dirHandle.name;
@@ -1992,7 +2064,7 @@
                     }
                 }
 
-                showToast('Fetching site information...', 'info');
+                showToast('Fetching site information...', 'info', { mergeKey: 'netlify-pull' });
                 const nBase = netlifyApiBase();
 
                 const siteResponse = await fetch(
@@ -2009,7 +2081,7 @@
                 }
 
                 // Step 3: Get list of all files via Netlify API
-                showToast('Fetching file list...', 'info');
+                showToast('Fetching file list...', 'info', { mergeKey: 'netlify-pull' });
                 const filesResponse = await fetch(
                     `${nBase}/api/v1/sites/${siteId}/files`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
@@ -2028,7 +2100,7 @@
                 }
 
                 // Step 4: Download index.html
-                showToast('Downloading index.html...', 'info');
+                showToast('Downloading index.html...', 'info', { mergeKey: 'netlify-pull' });
                 const htmlResponse = await fetch(`${filesOrigin}/index.html`);
                 if (!htmlResponse.ok) {
                     throw new Error(`Failed to download index.html: ${htmlResponse.status}`);
@@ -2038,7 +2110,7 @@
                 // Step 5: Download assets
                 const assetBlobs = new Map();
                 if (assetFiles.length > 0) {
-                    showToast(`Downloading ${assetFiles.length} assets...`, 'info');
+                    showToast(`Downloading ${assetFiles.length} assets...`, 'info', { mergeKey: 'netlify-pull' });
                     let downloaded = 0;
 
                     await Promise.all(assetFiles.map(async (file) => {
@@ -2052,12 +2124,12 @@
                         }
                         downloaded++;
                         if (downloaded % 3 === 0 || downloaded === assetFiles.length) {
-                            showToast(`Downloading assets... (${downloaded}/${assetFiles.length})`, 'info');
+                            showToast(`Downloading assets... (${downloaded}/${assetFiles.length})`, 'info', { mergeKey: 'netlify-pull' });
                         }
                     }));
                 }
 
-                showToast('Syncing files...', 'info');
+                showToast('Syncing files...', 'info', { mergeKey: 'netlify-pull' });
 
                 if (state.backend === 'http') {
                     const putHtml = await fetch('/api/project/index.html', {
@@ -2113,6 +2185,7 @@
                     }
                 }
 
+                dismissMergeToast('netlify-pull');
                 showToast('Sync complete! Opening project...', 'success');
 
                 if (state.backend === 'http') {
@@ -2123,6 +2196,7 @@
 
             } catch (err) {
                 if (err.name !== 'AbortError') {
+                    dismissMergeToast('netlify-pull');
                     let msg = err.message;
                     if (msg === 'Failed to fetch' || (err instanceof TypeError && msg.includes('fetch'))) {
                         msg += ' — open the editor via a local HTTP server (not file://), or add Access-Control-Allow-Origin on Netlify for /index.html and /assets/*';

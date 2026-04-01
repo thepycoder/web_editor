@@ -5,12 +5,13 @@ import (
 	"strings"
 )
 
-// LoadFile parses a minimal dotenv file and sets variables only when os.Getenv(key) is empty.
-func LoadFile(path string) error {
+// ParseFile reads a minimal dotenv file and returns key → value (last wins on duplicate keys).
+func ParseFile(path string) (map[string]string, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	out := make(map[string]string)
 	s := string(b)
 	s = strings.TrimPrefix(s, "\ufeff")
 	for _, line := range strings.Split(s, "\n") {
@@ -34,8 +35,20 @@ func LoadFile(path string) error {
 				val = val[1 : len(val)-1]
 			}
 		}
-		if os.Getenv(key) == "" {
-			_ = os.Setenv(key, val)
+		out[key] = val
+	}
+	return out, nil
+}
+
+// LoadFile parses a minimal dotenv file and sets variables only when os.Getenv(key) is empty.
+func LoadFile(path string) error {
+	m, err := ParseFile(path)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		if os.Getenv(k) == "" {
+			_ = os.Setenv(k, v)
 		}
 	}
 	return nil

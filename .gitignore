@@ -1,2 +1,3 @@
 /target
 .env
+cmd/projectwhy/z_baked_env.gen.go

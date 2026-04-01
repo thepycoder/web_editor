@@ -31,9 +31,11 @@ var version = "dev"
 //	go build -ldflags "-X main.bakedGitHubRepo=myorg/projectwhy"
 var bakedGitHubRepo string
 
-// Optional link-time defaults for internal builds, e.g.:
+// Optional link-time defaults for internal builds. Prefer baking from .env via:
 //
-//	go build -ldflags "-X main.bakedNetlifyToken=TOKEN -X main.bakedNetlifySiteID=ID"
+//	go run ./cmd/bake-build -o dist/projectwhy
+//
+// Or: go build -ldflags "-X main.bakedNetlifyToken=TOKEN -X main.bakedNetlifySiteID=ID"
 var bakedNetlifyToken string
 var bakedNetlifySiteID string
 
@@ -50,7 +52,10 @@ func defaultProjectDir() string {
 	return filepath.Join(h, "ProjectWhyWebsite")
 }
 
-func loadDotenv() {
+// loadDotenv loads the first existing .env among: next to the binary, cwd, then project root.
+// Project root matters when the binary is on PATH or run from a cwd that has no .env, while
+// PROJECTWHY_DIR or -project points at a folder that contains .env (e.g. ~/ProjectWhyWebsite/.env).
+func loadDotenv(projectRoot string) {
 	exe, err := os.Executable()
 	exeDir := ""
 	if err == nil {
@@ -60,10 +65,14 @@ func loadDotenv() {
 	if err != nil {
 		wd = ""
 	}
-	envload.TryLoadFirst(
+	paths := []string{
 		filepath.Join(exeDir, ".env"),
 		filepath.Join(wd, ".env"),
-	)
+	}
+	if projectRoot != "" {
+		paths = append(paths, filepath.Join(projectRoot, ".env"))
+	}
+	envload.TryLoadFirst(paths...)
 }
 
 func resolvedNetlifyDefaults() httpserver.NetlifyDefaults {
@@ -112,7 +121,7 @@ func main() {
 	doUpdate := flag.Bool("update", false, "Check GitHub releases, download if newer, then swap binary and restart (set PROJECTWHY_GITHUB_REPO or bake bakedGitHubRepo)")
 	flag.Parse()
 
-	loadDotenv()
+	loadDotenv(resolveProjectDir(*projectDir))
 
 	if *doUpdate {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
