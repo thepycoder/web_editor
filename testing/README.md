@@ -55,7 +55,7 @@ testing/
 | Netlify config | localStorage | `netlify-config.spec.ts` | API token & site settings |
 | Toast notifications | UI feedback | `toast-notifications.spec.ts` | Success/error messages |
 | Keyboard shortcuts | Ctrl+S, Enter | `keyboard-shortcuts.spec.ts` | Keyboard interactions |
-| Editor state | Overall | `editor-state.spec.ts` | Load, save, unsaved tracking |
+| Editor state | Overall | `editor-state.spec.ts` | Load, deploy controls, content extraction |
 
 ## Running Tests
 
@@ -131,11 +131,10 @@ All selectors are encapsulated in page objects for maintainability:
 
 ```typescript
 // Good - uses page object
-await editor.btnSave.click();
 await preview.getEditableText('#title').fill('New');
 
-// Avoid - raw selectors in tests
-await page.locator('#btn-save').click();
+// Avoid - raw CSS selectors scattered in tests
+await page.locator('#main-title').click();
 ```
 
 ### 4. Waiting for UI Feedback
@@ -176,7 +175,7 @@ test.describe('Feature Name', () => {
     await element.fill('new value');
     
     // Assert
-    await expect(editor.unsavedIndicator).toBeVisible();
+    await expect(element).toHaveText('new value');
   });
 });
 ```

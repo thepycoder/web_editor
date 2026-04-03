@@ -61,18 +61,6 @@ test.describe('Link Editing (data-editable-link)', () => {
     await editor.waitForToast('Link updated');
   });
 
-  test('saving link should mark document as unsaved', async () => {
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-    
-    const link = preview.getEditableLink('#nav-link-home');
-    await link.click();
-    await linkModal.waitForOpen();
-    await linkModal.setUrl('https://changed.com');
-    await linkModal.save();
-    
-    await expect(editor.unsavedIndicator).toBeVisible();
-  });
-
   test('cancel button should close modal without changes', async () => {
     const link = preview.getEditableLink('#nav-link-about');
     const originalText = await link.textContent();

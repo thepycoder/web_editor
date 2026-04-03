@@ -8,7 +8,6 @@ import { TEST_TEMPLATE, EMPTY_TEMPLATE } from '../helpers';
  * Tests the overall editor state management:
  * - Initial empty state
  * - File loaded state
- * - Unsaved changes tracking
  * - Content extraction
  */
 test.describe('Editor State', () => {
@@ -38,33 +37,6 @@ test.describe('Editor State', () => {
     
     await expect(editor.fileName).toBeVisible();
     await expect(editor.fileName).toHaveText('Test Project');
-  });
-
-  test('save button should be disabled initially', async () => {
-    await expect(editor.btnSave).toBeDisabled();
-  });
-
-  test('save button should be enabled after loading content', async () => {
-    await editor.injectTestContent(TEST_TEMPLATE);
-    
-    await expect(editor.btnSave).toBeEnabled();
-  });
-
-  test('unsaved indicator should be hidden initially', async () => {
-    await editor.injectTestContent(TEST_TEMPLATE);
-    
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-  });
-
-  test('unsaved indicator should appear after edits', async () => {
-    await editor.injectTestContent(TEST_TEMPLATE);
-    
-    const title = preview.getEditableText('#main-title');
-    await title.click();
-    await title.fill('Changed');
-    await title.evaluate(el => el.dispatchEvent(new Event('input', { bubbles: true })));
-    
-    await expect(editor.unsavedIndicator).toBeVisible();
   });
 
   test('open settings button should exist in empty state', async () => {

@@ -6,7 +6,7 @@ import { TEST_TEMPLATE, waitForEditorReady } from '../helpers';
  * Keyboard Shortcuts Tests
  * 
  * Tests keyboard navigation and shortcuts:
- * - Ctrl+S triggers save
+ * - Ctrl+S does not open browser save dialog
  * - Enter in link URL field saves
  * - Escape closes modals (if implemented)
  */
@@ -24,24 +24,6 @@ test.describe('Keyboard Shortcuts', () => {
     preview = new PreviewFrame(editor.previewFrame);
     linkModal = new LinkModal(page);
     await editor.injectTestContent(TEST_TEMPLATE);
-  });
-
-  test('Ctrl+S should trigger save when file is open', async ({ page }) => {
-    // Make a change to enable save
-    const title = preview.getEditableText('#main-title');
-    await title.click();
-    await title.fill('Modified Title');
-    await title.evaluate(el => el.dispatchEvent(new Event('input', { bubbles: true })));
-    
-    // Verify unsaved
-    await expect(editor.unsavedIndicator).toBeVisible();
-    
-    // Press Ctrl+S
-    await page.keyboard.press('Control+s');
-    
-    // Note: Save will fail because we don't have real file system access,
-    // but we can verify the shortcut was captured (no browser save dialog)
-    // In a real scenario with mocked file system, this would save
   });
 
   test('Ctrl+S should be prevented from opening browser save dialog', async ({ page }) => {

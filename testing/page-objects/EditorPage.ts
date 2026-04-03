@@ -21,11 +21,9 @@ export class EditorPage {
   // Toolbar elements
   readonly btnDownloadNetlify: Locator;
   readonly btnOpenSettings: Locator;
-  readonly btnSave: Locator;
   readonly btnSettings: Locator;
   readonly btnDeployNetlify: Locator;
   readonly fileName: Locator;
-  readonly unsavedIndicator: Locator;
   
   // States
   readonly emptyState: Locator;
@@ -47,11 +45,9 @@ export class EditorPage {
     // Toolbar
     this.btnDownloadNetlify = page.locator('#btn-download-netlify');
     this.btnOpenSettings = page.locator('#btn-open-settings');
-    this.btnSave = page.locator('#btn-save');
     this.btnSettings = page.locator('#btn-settings');
     this.btnDeployNetlify = page.locator('#btn-deploy-netlify');
     this.fileName = page.locator('#file-name');
-    this.unsavedIndicator = page.locator('#unsaved-indicator');
     
     // States
     this.emptyState = page.locator('#empty-state');
@@ -124,7 +120,6 @@ export class EditorPage {
       win.state.project.assetsHandle = {};
       win.state.content = win.state.content || {};
       win.state.content.original = content;
-      win.state.content.hasUnsavedChanges = false;
       win.state.assetBlobUrls = win.state.assetBlobUrls || new Map();
       win.state.netlifyConfig = win.state.netlifyConfig || {};
       win.state.ui = win.state.ui || {};
@@ -146,8 +141,6 @@ export class EditorPage {
 
       document.getElementById('empty-state')!.style.display = 'none';
       document.getElementById('preview-wrapper')!.style.display = 'block';
-      document.getElementById('btn-save')!.removeAttribute('disabled');
-      document.getElementById('unsaved-indicator')!.style.display = 'none';
       (document.getElementById('project-folder') as HTMLInputElement).value = 'Test Project';
       
       // Get the iframe and write content
@@ -199,20 +192,6 @@ export class EditorPage {
    */
   async waitForToast(text: string, timeout = 5000) {
     await this.toastContainer.locator('.toast', { hasText: text }).waitFor({ timeout });
-  }
-
-  /**
-   * Checks if unsaved changes indicator is visible
-   */
-  async hasUnsavedChanges(): Promise<boolean> {
-    return this.unsavedIndicator.isVisible();
-  }
-
-  /**
-   * Checks if the save button is enabled
-   */
-  async isSaveEnabled(): Promise<boolean> {
-    return !(await this.btnSave.isDisabled());
   }
 
   /**

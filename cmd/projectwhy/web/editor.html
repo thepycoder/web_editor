@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="pw-version" content="__PW_VERSION__">
     <title>ProjectWhy CMS</title>
     <style>
         * {
@@ -123,12 +124,6 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-        }
-
-        .unsaved-indicator {
-            color: var(--warning);
-            font-size: 12px;
-            margin-left: -8px;
         }
 
         /* Viewport Buttons */
@@ -359,6 +354,14 @@
             gap: 6px;
         }
 
+        .app-version {
+            font-size: 11px;
+            color: var(--text-muted);
+            opacity: 0.5;
+            user-select: none;
+            letter-spacing: 0.02em;
+        }
+
         .status-dot {
             width: 8px;
             height: 8px;
@@ -424,11 +427,7 @@
 <body>
     <header class="toolbar">
         <h1>ProjectWhy CMS</h1>
-        <button class="btn" id="btn-save" disabled>
-            <span>💾</span> Opslaan op Laptop
-        </button>
         <span class="file-name" id="file-name" style="display: none;"></span>
-        <span class="unsaved-indicator" id="unsaved-indicator" style="display: none;">● Unsaved</span>
         <div class="viewport-buttons" id="viewport-buttons">
             <button class="viewport-btn active" id="viewport-desktop" title="Desktop view (100%)">
                 <span>🖥️</span>
@@ -474,6 +473,7 @@
         </div>
         <div class="status-item" style="margin-left: auto; gap: 12px; align-items: center;">
             <button type="button" class="btn" id="btn-stop-server" style="display: none; padding: 4px 10px; font-size: 12px;" title="Stop the local ProjectWhy server">Stop local server</button>
+            <span class="app-version" id="app-version" title="ProjectWhy version"></span>
             <span id="browser-hint">Chrome/Edge recommended for full functionality</span>
         </div>
     </footer>
@@ -565,7 +565,6 @@
             // Content state
             content: {
                 original: '',
-                hasUnsavedChanges: false,
             },
             // Asset blob URLs for preview rendering
             assetBlobUrls: new Map(),
@@ -614,6 +613,20 @@
             }
         }
 
+        function syncAppVersionLabel(healthData) {
+            const el = $('app-version');
+            if (!el) return;
+            let v = '';
+            if (healthData && typeof healthData.version === 'string' && healthData.version.trim()) {
+                v = healthData.version.trim();
+            } else {
+                const meta = document.querySelector('meta[name="pw-version"]');
+                const raw = meta ? (meta.getAttribute('content') || '').trim() : '';
+                if (raw && !raw.includes('__PW_VERSION__')) v = raw;
+            }
+            if (v) el.textContent = 'v' + v;
+        }
+
         async function detectBackend() {
             window.__cmsReady = false;
             if (location.protocol === 'file:') {
@@ -629,6 +642,7 @@
                 const data = await r.json();
                 state.backend = 'http';
                 state.httpProjectDir = data.projectDir || '';
+                syncAppVersionLabel(data);
                 updateLocalServerUI();
                 await openProjectHttp();
             } catch {
@@ -679,7 +693,6 @@
                     state.project.hasIndexHtml = false;
                     $('file-name').textContent = 'Project (empty)';
                     $('file-name').style.display = 'block';
-                    $('btn-save').disabled = true;
                     $('empty-state').style.display = 'flex';
                     $('preview-wrapper').style.display = 'none';
                     updateDeployButtons();
@@ -714,12 +727,9 @@
                 }
 
                 state.content.original = content;
-                state.content.hasUnsavedChanges = false;
 
                 $('file-name').textContent = state.httpProjectDir.split(/[/\\]/).filter(Boolean).pop() || 'Project';
                 $('file-name').style.display = 'block';
-                $('unsaved-indicator').style.display = 'none';
-                $('btn-save').disabled = false;
                 $('empty-state').style.display = 'none';
                 $('preview-wrapper').style.display = 'block';
 
@@ -954,12 +964,9 @@
                 const file = await fileHandle.getFile();
                 const content = await file.text();
                 state.content.original = content;
-                state.content.hasUnsavedChanges = false;
                 
                 $('file-name').textContent = dirHandle.name;
                 $('file-name').style.display = 'block';
-                $('unsaved-indicator').style.display = 'none';
-                $('btn-save').disabled = false;
                 $('empty-state').style.display = 'none';
                 $('preview-wrapper').style.display = 'block';
                 
@@ -970,138 +977,6 @@
                 if (err.name !== 'AbortError') {
                     showToast('Failed to open project: ' + err.message, 'error');
                 }
-            }
-        }
-
-        // Collect referenced assets from the current document
-        function getReferencedAssets(doc) {
-            const referenced = new Set();
-            
-            // 1. Check editable images (managed by CMS)
-            doc.querySelectorAll('[data-editable-image]').forEach(img => {
-                const filename = img.dataset.assetFilename;
-                if (filename) referenced.add(filename);
-            });
-
-            // 2. Check for any other usage of known assets (safety net)
-            // This prevents deleting assets that are used in standard <img> tags 
-            // but not marked as editable, or used in other ways.
-            if (state.assetBlobUrls && state.assetBlobUrls.size > 0) {
-                const htmlContent = doc.documentElement.outerHTML;
-                
-                for (const [filename, blobUrl] of state.assetBlobUrls) {
-                    if (referenced.has(filename)) continue;
-
-                    // Check if the blob URL is present (active preview usage)
-                    if (htmlContent.includes(blobUrl)) {
-                        referenced.add(filename);
-                        continue;
-                    }
-
-                    // Check if the filename itself is present (e.g. in a script or unreplaced path)
-                    // We check for 'assets/filename' to be reasonably specific
-                    if (htmlContent.includes(filename)) {
-                        referenced.add(filename);
-                    }
-                }
-            }
-
-            return referenced;
-        }
-
-        // Clean up orphaned assets on save (lazy cleanup)
-        async function cleanupOrphanedAssets(doc) {
-            const referenced = getReferencedAssets(doc);
-            if (state.backend === 'http') {
-                const res = await fetch('/api/project/assets');
-                const names = await readAssetNameList(res);
-                for (const filename of names) {
-                    if (!referenced.has(filename)) {
-                        try {
-                            await fetch('/api/project/assets/' + encodeURIComponent(filename), { method: 'DELETE' });
-                            if (state.assetBlobUrls.has(filename)) {
-                                URL.revokeObjectURL(state.assetBlobUrls.get(filename));
-                                state.assetBlobUrls.delete(filename);
-                            }
-                        } catch (err) {
-                            console.warn(`Could not delete ${filename}:`, err);
-                        }
-                    }
-                }
-                return;
-            }
-            const assetsHandle = state.project.assetsHandle;
-            if (!assetsHandle) return;
-
-            const toDelete = [];
-            for await (const entry of assetsHandle.values()) {
-                if (entry.kind === 'file' && !referenced.has(entry.name)) {
-                    toDelete.push(entry.name);
-                }
-            }
-
-            for (const filename of toDelete) {
-                try {
-                    await assetsHandle.removeEntry(filename);
-                    if (state.assetBlobUrls.has(filename)) {
-                        URL.revokeObjectURL(state.assetBlobUrls.get(filename));
-                        state.assetBlobUrls.delete(filename);
-                    }
-                } catch (err) {
-                    console.warn(`Could not delete ${filename}:`, err);
-                }
-            }
-        }
-
-        async function saveFile() {
-            if (state.backend === 'http') {
-                if (!state.project.httpOpen || !state.project.hasIndexHtml) return;
-                try {
-                    const doc = $('preview-frame').contentDocument;
-                    await cleanupOrphanedAssets(doc);
-                    const content = getEditedContent();
-                    const putRes = await fetch('/api/project/index.html', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-                        body: content,
-                    });
-                    if (!putRes.ok) {
-                        throw new Error(putRes.statusText || 'save failed');
-                    }
-                    state.content.original = content;
-                    state.content.hasUnsavedChanges = false;
-                    $('unsaved-indicator').style.display = 'none';
-                    showToast('Project saved', 'success');
-                } catch (err) {
-                    showToast('Failed to save project: ' + err.message, 'error');
-                }
-                return;
-            }
-            if (!state.project.fileHandle || !state.project.dirHandle) return;
-
-            try {
-                const doc = $('preview-frame').contentDocument;
-
-                await cleanupOrphanedAssets(doc);
-
-                const content = getEditedContent();
-                const writable = await state.project.fileHandle.createWritable();
-                await writable.write(content);
-                await writable.close();
-
-                state.content.original = content;
-                state.content.hasUnsavedChanges = false;
-                $('unsaved-indicator').style.display = 'none';
-                showToast('Project saved', 'success');
-            } catch (err) {
-                showToast('Failed to save project: ' + err.message, 'error');
-            }
-        }
-
-        function markUnsaved() {
-            if (!state.content.hasUnsavedChanges) {
-                state.content.hasUnsavedChanges = true;
-                $('unsaved-indicator').style.display = 'inline';
             }
         }
 
@@ -1397,7 +1272,6 @@
             // Setup text editing
             doc.querySelectorAll('[data-editable]').forEach(el => {
                 el.setAttribute('contenteditable', 'true');
-                el.addEventListener('input', () => markUnsaved());
             });
             
             // Setup image replacement
@@ -1449,7 +1323,6 @@
                 e.preventDefault(); // Prevent losing selection
                 doc.execCommand('bold', false, null);
                 updateToolbarState(doc, toolbar);
-                markUnsaved();
             });
             
             // Link button handler
@@ -1478,7 +1351,6 @@
                     showToast('Link toegevoegd', 'success');
                 }
                 updateToolbarState(doc, toolbar);
-                markUnsaved();
             });
             
             // Track selection changes to show/hide toolbar
@@ -1532,7 +1404,6 @@
                             e.preventDefault();
                             doc.execCommand('bold', false, null);
                             updateToolbarState(doc, toolbar);
-                            markUnsaved();
                         }
                     }
                 }
@@ -1592,7 +1463,6 @@
                     }
                     
                     updateToggleButton(toolbar, newHidden);
-                    markUnsaved();
                     showToast(newHidden ? 'Element hidden' : 'Element visible', 'success');
                 });
             });
@@ -1636,7 +1506,6 @@
                 element.parentNode.insertBefore(clone, element.nextSibling);
                 setupEditableElements(doc);
                 attachSectionToolbar(clone, container, doc);
-                markUnsaved();
                 showToast('Section duplicated', 'success');
             });
             
@@ -1645,7 +1514,6 @@
                 e.stopPropagation();
                 if (container.children.length > 1) {
                     element.remove();
-                    markUnsaved();
                     showToast('Section deleted', 'success');
                 } else {
                     showToast('Cannot delete the last item', 'error');
@@ -1741,7 +1609,6 @@
                     img.removeAttribute('srcset');
                 }
 
-                markUnsaved();
                 showToast('Image replaced', 'success');
             } catch (err) {
                 showToast('Failed to replace image: ' + err.message, 'error');
@@ -1860,12 +1727,6 @@
             if (!canDeploy) return;
 
             try {
-                // Auto-save before deploying
-                if (state.content.hasUnsavedChanges) {
-                    showToast('Saving changes...', 'info', { mergeKey: 'netlify-deploy' });
-                    await saveFile();
-                }
-
                 showToast('Starting Netlify deployment...', 'info', { mergeKey: 'netlify-deploy' });
                 $('btn-deploy-netlify').disabled = true;
 
@@ -2231,7 +2092,6 @@
         // Event Listeners
         // ============================================
         $('btn-open-settings').addEventListener('click', () => $('settings-modal').classList.add('active'));
-        $('btn-save').addEventListener('click', saveFile);
         $('btn-settings').addEventListener('click', () => $('settings-modal').classList.add('active'));
         $('settings-close').addEventListener('click', () => closeModal('settings-modal'));
         $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
@@ -2270,7 +2130,6 @@
             if (state.ui.currentLinkElement) {
                 state.ui.currentLinkElement.textContent = $('link-text').value;
                 state.ui.currentLinkElement.setAttribute('href', $('link-url').value || '#');
-                markUnsaved();
                 showToast('Link updated', 'success');
             }
             closeModal('link-modal');
@@ -2289,15 +2148,10 @@
             }
         });
 
-        // Keyboard shortcuts
+        // Keyboard shortcuts — block Ctrl+S (no local save; avoid browser "save page")
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 's') {
                 e.preventDefault();
-                if (state.backend === 'http') {
-                    if (state.project.hasIndexHtml) saveFile();
-                } else if (state.project.fileHandle) {
-                    saveFile();
-                }
             }
         });
 
@@ -2311,6 +2165,7 @@
         // ============================================
         // Initialize
         // ============================================
+        syncAppVersionLabel();
         updateNetlifyStatus();
         detectBackend();
 
@@ -2326,7 +2181,6 @@
         window.setupToggleableElements = setupToggleableElements;
         window.setupRepeatableSections = setupRepeatableSections;
         window.getEditedContent = getEditedContent;
-        window.markUnsaved = markUnsaved;
         window.showToast = showToast;
         window.setViewportMode = setViewportMode;
         window.loadProjectConfig = loadProjectConfig;

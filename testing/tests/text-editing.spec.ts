@@ -8,7 +8,6 @@ import { expectContentEditable, EDITOR_COLORS } from '../helpers/assertions';
  * 
  * Tests the inline text editing functionality:
  * - Elements become contenteditable
- * - Changes trigger unsaved state
  * - Visual feedback on hover/focus
  * - Multiple editables work independently
  */
@@ -39,24 +38,6 @@ test.describe('Text Editing (data-editable)', () => {
     for (let i = 0; i < Math.min(count, 3); i++) {
       await expectContentEditable(editables.nth(i));
     }
-  });
-
-  test('editing text should mark document as unsaved', async () => {
-    // Start with clean state
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-
-    // Click and edit the title
-    const title = preview.getEditableText('#main-title');
-    await title.click();
-    await title.pressSequentially(' - Modified');
-
-    // Dispatch input event to ensure it registers
-    await title.evaluate(el => {
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-
-    // Should show unsaved indicator
-    await expect(editor.unsavedIndicator).toBeVisible();
   });
 
   test('editable elements should show outline on hover', async () => {

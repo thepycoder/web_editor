@@ -16,7 +16,6 @@ import {
  * - Initially hidden elements show "Show" button  
  * - Hidden elements have reduced opacity in editor
  * - Toggling updates the data-cms-hidden attribute
- * - Toggling marks document as unsaved
  */
 test.describe('Toggleable Elements (data-toggleable)', () => {
   let editor: EditorPage;
@@ -115,16 +114,6 @@ test.describe('Toggleable Elements (data-toggleable)', () => {
     // Note: Multiple toggles may not work due to event handler being
     // attached to the original button element which gets replaced.
     // This is a known limitation of the current editor implementation.
-  });
-
-  test('toggling should mark document as unsaved', async () => {
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-    
-    const visibleBanner = preview.getToggleable('#banner-visible');
-    await visibleBanner.hover();
-    await preview.getToggleButton(visibleBanner).click();
-    
-    await expect(editor.unsavedIndicator).toBeVisible();
   });
 
   test('toggleable elements should show outline on hover', async () => {

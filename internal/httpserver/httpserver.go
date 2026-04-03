@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -28,6 +29,7 @@ type NetlifyDefaults struct {
 type Server struct {
 	root       *project.Root
 	editorHTML []byte
+	appVersion string
 	netlify    NetlifyDefaults
 
 	srv *http.Server
@@ -35,8 +37,8 @@ type Server struct {
 	shutdownOnce sync.Once
 }
 
-func New(root *project.Root, editorHTML []byte, addr string, netlify NetlifyDefaults) *Server {
-	s := &Server{root: root, editorHTML: editorHTML, netlify: netlify}
+func New(root *project.Root, editorHTML []byte, addr string, netlify NetlifyDefaults, appVersion string) *Server {
+	s := &Server{root: root, editorHTML: editorHTML, appVersion: appVersion, netlify: netlify}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleEditor)
 	mux.HandleFunc("GET /editor.html", s.handleEditor)
@@ -77,7 +79,8 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) handleEditor(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write(s.editorHTML)
+	html := bytes.ReplaceAll(s.editorHTML, []byte("__PW_VERSION__"), []byte(s.appVersion))
+	_, _ = w.Write(html)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -85,6 +88,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":         true,
 		"projectDir": s.root.Dir(),
+		"version":    s.appVersion,
 	})
 }
 
@@ -199,6 +203,7 @@ func (s *Server) handleGetIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
+// handlePutIndex writes index.html to disk (used by Netlify "Website → Laptop" sync; no manual-save UI).
 func (s *Server) handlePutIndex(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	b, err := io.ReadAll(io.LimitReader(r.Body, 50<<20))

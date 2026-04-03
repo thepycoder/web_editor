@@ -70,18 +70,6 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     await editor.waitForToast('Section duplicated');
   });
 
-  test('duplicating should mark document as unsaved', async () => {
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-    
-    const container = preview.getRepeatable('#cards-container');
-    const firstCard = container.locator('> .card').first();
-    
-    await firstCard.hover();
-    await preview.getDuplicateButton(firstCard).click();
-    
-    await expect(editor.unsavedIndicator).toBeVisible();
-  });
-
   test('clicking delete should remove the section', async () => {
     const container = preview.getRepeatable('#cards-container');
     
@@ -98,18 +86,6 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     
     // Should show toast
     await editor.waitForToast('Section deleted');
-  });
-
-  test('deleting should mark document as unsaved', async () => {
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-    
-    const container = preview.getRepeatable('#cards-container');
-    const card = container.locator('> .card').first();
-    
-    await card.hover();
-    await preview.getDeleteButton(card).click();
-    
-    await expect(editor.unsavedIndicator).toBeVisible();
   });
 
   test('should not allow deleting the last item', async () => {

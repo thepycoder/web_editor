@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,12 +19,19 @@ import (
 	"web_editor/internal/envload"
 	"web_editor/internal/httpserver"
 	"web_editor/internal/project"
+	appversion "web_editor/internal/version"
 )
 
-// App version, set at build time:
+// App version: empty uses appversion.Version; override with:
 //
 //	go build -ldflags "-X main.version=1.0.0"
-var version = "dev"
+var version string
+
+func init() {
+	if version == "" {
+		version = appversion.Version
+	}
+}
 
 // Optional link-time defaults for internal builds. Prefer baking from .env via:
 //
@@ -108,6 +116,28 @@ func openBrowser(url string) {
 	}
 }
 
+// tryShutdownExisting asks any process already listening on addr (localhost)
+// to exit via POST /api/shutdown, then briefly waits for the port to free up.
+func tryShutdownExisting(addr string) {
+	url := "http://" + strings.Replace(addr, "0.0.0.0:", "127.0.0.1:", 1) + "/api/shutdown"
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Post(url, "", nil)
+	if err != nil {
+		return
+	}
+	resp.Body.Close()
+	log.Println("asked previous instance to shut down, waiting for port...")
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		time.Sleep(200 * time.Millisecond)
+		conn, err := net.DialTimeout("tcp", addr, 200*time.Millisecond)
+		if err != nil {
+			return // nothing listening (or port became free)
+		}
+		conn.Close()
+	}
+}
+
 func main() {
 	listen := flag.String("listen", "127.0.0.1:4070", "HTTP listen address")
 	projectDir := flag.String("project", "", "Project root (default: PROJECTWHY_DIR or home/ProjectWhyWebsite)")
@@ -122,7 +152,9 @@ func main() {
 		log.Fatalf("project dir: %v", err)
 	}
 
-	srv := httpserver.New(pr, editorHTML, *listen, resolvedNetlifyDefaults())
+	srv := httpserver.New(pr, editorHTML, *listen, resolvedNetlifyDefaults(), version)
+
+	tryShutdownExisting(*listen)
 
 	go func() {
 		host := *listen

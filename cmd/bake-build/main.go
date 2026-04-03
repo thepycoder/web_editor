@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"web_editor/internal/envload"
+	"web_editor/internal/version"
 )
 
 const genFileName = "z_baked_env.gen.go"
@@ -81,10 +82,10 @@ func envForGoBuild(goos, goarch string) []string {
 
 func main() {
 	envPath := flag.String("env", ".env", "path to .env (relative to module root)")
-	out := flag.String("o", filepath.Join("dist", "projectwhy"), "output binary path (relative to module root unless absolute)")
+	out := flag.String("o", "", "output binary path (default: dist/projectwhy_<version>[.exe] on windows)")
 	goos := flag.String("goos", runtime.GOOS, "GOOS for the built binary (e.g. windows when cross-compiling from Linux)")
 	goarch := flag.String("goarch", runtime.GOARCH, "GOARCH for the built binary (e.g. amd64)")
-	extraLdflags := flag.String("ldflags", "", "extra -ldflags content (e.g. -X main.version=1.0.0), appended after -s -w")
+	extraLdflags := flag.String("ldflags", "", "extra -ldflags content, appended after -s -w and -X main.version")
 	keep := flag.Bool("keep", false, "keep the generated z_baked_env.gen.go file after build")
 	flag.Parse()
 
@@ -127,7 +128,14 @@ func main() {
 		defer removeGen(genPath)
 	}
 
-	outPath := *out
+	outPath := strings.TrimSpace(*out)
+	if outPath == "" {
+		base := "projectwhy_" + version.Version
+		if *goos == "windows" {
+			base += ".exe"
+		}
+		outPath = filepath.Join("dist", base)
+	}
 	if !filepath.IsAbs(outPath) {
 		outPath = filepath.Join(root, outPath)
 	}
@@ -135,7 +143,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ldflags := "-s -w"
+	ldflags := "-s -w -X main.version=" + version.Version
 	if x := strings.TrimSpace(*extraLdflags); x != "" {
 		ldflags += " " + x
 	}

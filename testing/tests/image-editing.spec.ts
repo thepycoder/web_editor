@@ -134,10 +134,6 @@ test.describe('Image File Selection (with mocked file input)', () => {
       if (img) {
         // Simulate image replacement
         img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-        
-        // Mark as unsaved
-        const indicator = document.getElementById('unsaved-indicator');
-        if (indicator) indicator.style.display = 'inline';
       }
     });
     
@@ -146,29 +142,5 @@ test.describe('Image File Selection (with mocked file input)', () => {
     expect(newSrc).not.toBe(originalSrc);
   });
 
-  test('image replacement should mark document as unsaved', async ({ page }) => {
-    await expect(editor.unsavedIndicator).not.toBeVisible();
-    
-    // Simulate image change
-    await page.evaluate(() => {
-      const img = document.querySelector('#preview-frame')
-        ?.contentDocument
-        ?.querySelector('#hero-image') as HTMLImageElement;
-      
-      if (img) {
-        img.src = 'data:image/png;base64,changed';
-        
-        // Trigger the unsaved state
-        const win = window as any;
-        if (typeof win.markUnsaved === 'function') {
-          win.markUnsaved();
-        } else {
-          document.getElementById('unsaved-indicator')!.style.display = 'inline';
-        }
-      }
-    });
-    
-    await expect(editor.unsavedIndicator).toBeVisible();
-  });
 });
 
