@@ -48,8 +48,8 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     
     await expect(duplicateBtn).toBeVisible();
     await expect(deleteBtn).toBeVisible();
-    await expect(duplicateBtn).toContainText('Duplicate');
-    await expect(deleteBtn).toContainText('Delete');
+    await expect(duplicateBtn).toContainText('Dupliceren');
+    await expect(deleteBtn).toContainText('Verwijderen');
   });
 
   test('clicking duplicate should clone the section', async () => {
@@ -67,7 +67,7 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     await expectItemCount(container, 4);
     
     // Should show toast
-    await editor.waitForToast('Section duplicated');
+    await editor.waitForToast('Sectie gedupliceerd');
   });
 
   test('clicking delete should remove the section', async () => {
@@ -85,7 +85,7 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     await expectItemCount(container, 2);
     
     // Should show toast
-    await editor.waitForToast('Section deleted');
+    await editor.waitForToast('Sectie verwijderd');
   });
 
   test('should not allow deleting the last item', async () => {
@@ -106,7 +106,7 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     await deleteBtn.click({ force: true });
     
     // Should show error toast
-    await editor.waitForToast('Cannot delete the last item');
+    await editor.waitForToast('Kan het laatste item niet verwijderen');
     
     // Should still have 1 item
     await expect(items).toHaveCount(1);
@@ -228,7 +228,7 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     
     // Should still have 1
     await expectItemCount(container, 1);
-    await editor.waitForToast('Cannot delete the last item');
+    await editor.waitForToast('Kan het laatste item niet verwijderen');
   });
 });
 

@@ -32,7 +32,7 @@ test.describe('Toast Notifications', () => {
     await settings.setToken('test');
     await settings.save();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Configuration saved' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Configuratie opgeslagen' });
     await expect(toast).toBeVisible();
     await expect(toast).toHaveClass(/success/);
   });
@@ -44,7 +44,7 @@ test.describe('Toast Notifications', () => {
     await card.hover();
     await preview.getDuplicateButton(card).click();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Section duplicated' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Sectie gedupliceerd' });
     await expect(toast).toBeVisible();
     await expect(toast).toHaveClass(/success/);
   });
@@ -56,7 +56,7 @@ test.describe('Toast Notifications', () => {
     await card.hover();
     await preview.getDeleteButton(card).click();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Section deleted' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Sectie verwijderd' });
     await expect(toast).toBeVisible();
     await expect(toast).toHaveClass(/success/);
   });
@@ -80,7 +80,7 @@ test.describe('Toast Notifications', () => {
     await item.hover();
     await preview.getDeleteButton(item).click();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Cannot delete' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Kan het laatste item niet verwijderen' });
     await expect(toast).toBeVisible();
     await expect(toast).toHaveClass(/error/);
   });
@@ -90,7 +90,7 @@ test.describe('Toast Notifications', () => {
     await banner.hover();
     await preview.getToggleButton(banner).click();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Element hidden' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Element verborgen' });
     await expect(toast).toBeVisible();
   });
 
@@ -100,7 +100,7 @@ test.describe('Toast Notifications', () => {
     
     await page.locator('#link-save').click();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Link updated' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Link bijgewerkt' });
     await expect(toast).toBeVisible();
   });
 
@@ -109,7 +109,7 @@ test.describe('Toast Notifications', () => {
     await settings.setToken('test');
     await settings.save();
     
-    const toast = editor.toastContainer.locator('.toast', { hasText: 'Configuration saved' });
+    const toast = editor.toastContainer.locator('.toast', { hasText: 'Configuratie opgeslagen' });
     await expect(toast).toBeVisible();
     
     // Wait for auto-dismiss (4 seconds + buffer)

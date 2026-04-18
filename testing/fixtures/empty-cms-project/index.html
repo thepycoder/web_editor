@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="nl"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Huisartsenpraktijk De Rotonde in Lokeren - dr. Dries Taelman, dr. Jelle Van Nieuwenhuyze, dr. Tine Konings en dr. Robbe De Bruyn. Moderne huisartsenzorg en sportgeneeskunde. Bel 09/348.91.45">
+  <meta name="theme-color" content="#618C96">
+  <link rel="icon" href="./assets/favicon.ico" type="image/x-icon">
+  <title>Huisartsenpraktijk De Rotonde</title>
+  <style>
+    /* CSS Variables */
+    :root {
+      --color-primary: #618C96;
+      --color-primary-light: #84aab3;
+      --color-primary-dark: #4a6e78;
+      --color-accent: #BF7A59;
+      --color-accent-light: #d49b80;
+      --color-background: #faf9f7;
+      --color-background-alt: #f5f3f0;
+      --color-surface: #ffffff;
+      --color-text: #2d3a35;
+      --color-text-muted: #526059;
+      --color-border: #e5e2dd;
+      --font-display: Georgia, 'Times New Roman', serif;
+      --font-body: 'Open Sans', Verdana, Arial, sans-serif;
+      --font-size-base: 1rem;
+      --font-size-sm: 0.875rem;
+      --font-size-lg: 1.125rem;
+      --font-size-xl: 1.25rem;
+      --font-size-2xl: 1.5rem;
+      --font-size-3xl: 2rem;
+      --font-size-4xl: 2.5rem;
+      --font-size-5xl: 3.5rem;
+      --line-height-tight: 1.2;
+      --line-height-normal: 1.6;
+      --space-xs: 0.5rem;
+      --space-sm: 1rem;
+      --space-md: 1.5rem;
+      --space-lg: 2rem;
+      --space-xl: 3rem;
+      --space-2xl: 4rem;
+      --space-3xl: 6rem;
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-xl: 32px;
+      --radius-full: 9999px;
+      --shadow-sm: 0 2px 8px rgba(97, 140, 150, 0.06);
+      --shadow-md: 0 4px 16px rgba(97, 140, 150, 0.08);
+      --shadow-lg: 0 8px 32px rgba(97, 140, 150, 0.12);
+      --shadow-xl: 0 16px 48px rgba(97, 140, 150, 0.16);
+      --transition-fast: 150ms ease;
+      --transition-normal: 250ms ease;
+      --container-max: 1200px;
+    }
+
+    /* Reset & Base */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body {
+      font-family: var(--font-body);
+      font-size: var(--font-size-base);
+      line-height: var(--line-height-normal);
+      color: var(--color-text);
+      background-color: var(--color-background);
+      -webkit-font-smoothing: antialiased;
+    }
+    img { max-width: 100%; height: auto; display: block; }
+    a { color: var(--color-primary); text-decoration: none; transition: color var(--transition-fast); }
+    a:hover { color: var(--color-primary-dark); }
+    ul, ol { list-style: none; }
+
+    /* Typography */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: var(--font-display);
+      font-weight: 400;
+      line-height: var(--line-height-tight);
+      color: var(--color-text);
+      margin-bottom: var(--space-sm);
+    }
+    h1 { font-size: clamp(var(--font-size-3xl), 5vw, var(--font-size-5xl)); }
+    h2 { font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-4xl)); }
+    h3 { font-size: clamp(var(--font-size-xl), 3vw, var(--font-size-2xl)); }
+    p { margin-bottom: var(--space-sm); }
+
+    /* Layout */
+    .container {
+      width: 100%;
+      max-width: var(--container-max);
+      margin: 0 auto;
+      padding: 0 var(--space-md);
+    }
+    .section { padding: var(--space-3xl) 0; }
+    .section-title {
+      text-align: center;
+      margin-bottom: var(--space-xl);
+    }
+    .section-title::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 4px;
+      background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      margin: var(--space-sm) auto 0;
+      border-radius: var(--radius-full);
+    }
+
+    /* Header */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+    }
+    .header__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--space-sm) var(--space-md);
+      max-width: var(--container-max);
+      margin: 0 auto;
+    }
+    .header__logo { display: flex; align-items: center; gap: var(--space-sm); }
+    .header__logo img { height: 48px; width: auto; }
+    .nav { display: none; }
+    @media (min-width: 1024px) {
+      .nav { display: flex; align-items: center; gap: var(--space-md); }
+      .nav .btn {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--font-size-sm);
+      }
+    }
+    .nav__list { display: flex; gap: var(--space-md); }
+    .nav__link {
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: var(--space-xs) 0;
+      position: relative;
+    }
+    .nav__link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--color-accent);
+      border-radius: var(--radius-full);
+      transition: width var(--transition-normal);
+    }
+    .nav__link:hover, .nav__link--active { color: var(--color-primary); }
+    .nav__link:hover::after, .nav__link--active::after { width: 100%; }
+    .nav-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding: var(--space-xs);
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    @media (min-width: 1024px) { .nav-toggle { display: none; } }
+    .nav-toggle span {
+      width: 24px;
+      height: 2px;
+      background: var(--color-text);
+      border-radius: var(--radius-full);
+    }
+    .nav-mobile {
+      position: fixed;
+      top: 72px;
+      left: 0;
+      right: 0;
+      background: var(--color-surface);
+      padding: var(--space-md);
+      border-bottom: 1px solid var(--color-border);
+      transform: translateY(-100%);
+      opacity: 0;
+      visibility: hidden;
+      transition: all var(--transition-normal);
+    }
+    .nav-mobile.is-active { transform: translateY(0); opacity: 1; visibility: visible; }
+    .nav-mobile__list { display: flex; flex-direction: column; gap: var(--space-sm); }
+    .nav-mobile__link {
+      display: block;
+      padding: var(--space-sm);
+      font-weight: 600;
+      color: var(--color-text);
+      border-radius: var(--radius-sm);
+    }
+    .nav-mobile__link:hover { background: var(--color-background-alt); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xs);
+      padding: var(--space-sm) var(--space-lg);
+      font-family: var(--font-body);
+      font-size: var(--font-size-base);
+      font-weight: 700;
+      border-radius: var(--radius-full);
+      /* border: 2px solid transparent; */
+      cursor: pointer;
+      transition: all var(--transition-normal);
+    }
+    .btn--primary {
+      background: linear-gradient(135deg, var(--color-accent), var(--color-accent-light));
+      color: white;
+      box-shadow: var(--shadow-md), 0 4px 12px rgba(232, 145, 122, 0.3);
+    }
+    .btn--primary:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg), 0 8px 20px rgba(232, 145, 122, 0.4);
+      color: white;
+    }
+    .btn--brand {
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
+      color: white;
+      box-shadow: var(--shadow-md), 0 4px 12px rgba(97, 140, 150, 0.3);
+    }
+    .btn--brand:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg), 0 8px 20px rgba(97, 140, 150, 0.4);
+      color: white;
+    }
+    .btn--secondary {
+      background: var(--color-surface);
+      color: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+    .btn--secondary:hover { background: var(--color-primary); color: white; }
+    .btn--large { padding: var(--space-md) var(--space-lg); font-size: var(--font-size-lg); }
+
+    /* Hero */
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr;
+      margin-top: 72px;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    }
+    @media (min-width: 1024px) {
+      .hero {
+        grid-template-columns: minmax(440px, 38%) 1fr;
+      }
+    }
+    .hero__card {
+      background: transparent;
+      padding: var(--space-xl);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      order: 1;
+      position: relative;
+      z-index: 1;
+      overflow: hidden;
+      color: white;
+    }
+    @media (min-width: 1024px) {
+      .hero__card {
+        padding: var(--space-3xl) var(--space-2xl);
+        order: 0;
+      }
+    }
+    .hero__image {
+      position: relative;
+      min-height: 300px;
+      order: 0;
+    }
+    @media (min-width: 480px) and (max-width: 1023px) {
+      .hero__image {
+        aspect-ratio: 3 / 2;
+        min-height: unset;
+      }
+    }
+    @media (min-width: 1024px) {
+      .hero__image {
+        order: 1;
+        min-height: auto;
+      }
+    }
+    .hero__image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 60% center;
+      position: absolute;
+      inset: 0;
+    }
+    .hero__title {
+      margin-bottom: var(--space-sm);
+      color: white;
+      word-break: keep-all;
+      overflow-wrap: normal;
+      hyphens: none;
+      text-wrap: balance;
+      font-size: clamp(1.5rem, 4vw + 0.5rem, var(--font-size-5xl));
+    }
+    @media (min-width: 1024px) {
+      .hero__title {
+        font-size: clamp(1.75rem, 2.5vw + 0.5rem, var(--font-size-5xl));
+      }
+    }
+    .hero__tagline {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: var(--font-size-xl);
+      color: var(--color-accent-light);
+      margin-bottom: var(--space-md);
+    }
+    .hero__description {
+      font-size: var(--font-size-lg);
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: var(--space-lg);
+    }
+    .hero__actions {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .hero__actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+    @media (min-width: 600px) {
+      .hero__actions {
+        flex-direction: row;
+      }
+      .hero__actions .btn {
+        flex: 1;
+      }
+    }
+
+    /* Appointment Options */
+    .hero__subtitle {
+      font-family: var(--font-display);
+      font-size: var(--font-size-2xl);
+      color: var(--color-accent-light);
+      margin-bottom: var(--space-md);
+      font-weight: 400;
+    }
+    .appointment-options {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+    }
+    .appointment-option {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border);
+      transition: all var(--transition-normal);
+      text-decoration: none;
+      color: var(--color-text);
+    }
+    .appointment-option:hover {
+      border-color: var(--color-accent);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      color: inherit;
+    }
+    .appointment-option--accent:hover {
+      border-color: var(--color-accent);
+    }
+    .appointment-option__icon {
+      width: 48px;
+      height: 48px;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: var(--shadow-sm);
+    }
+    .appointment-option__content {
+      flex: 1;
+      min-width: 0;
+    }
+    .appointment-option__title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 2px;
+    }
+    .appointment-option__subtitle {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+    .appointment-option__phone {
+      font-size: var(--font-size-lg);
+      font-weight: 700;
+      color: var(--color-accent);
+      margin-bottom: 4px;
+    }
+    .appointment-option__hours {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+    }
+    .appointment-option__hours span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .appointment-option__hours svg {
+      flex-shrink: 0;
+      opacity: 0.6;
+    }
+    .appointment-option__arrow {
+      flex-shrink: 0;
+      opacity: 0.4;
+      transition: all var(--transition-normal);
+    }
+    .appointment-option:hover .appointment-option__arrow {
+      opacity: 1;
+      transform: translateX(4px);
+    }
+
+    /* Announcements */
+    .announcements { padding: var(--space-xl) 0; }
+    .announcements__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-sm); }
+    @media (min-width: 600px) { .announcements__grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .announcements__grid { grid-template-columns: repeat(3, 1fr); } }
+    .announcement-card {
+      background: var(--color-surface);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-sm);
+      border-left: 3px solid var(--color-primary);
+      transition: all var(--transition-normal);
+    }
+    .announcement-card:hover {
+      box-shadow: var(--shadow-md);
+      border-left-color: var(--color-accent);
+    }
+    .announcement-card__date {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      margin-bottom: var(--space-xs);
+    }
+    .announcement-card__title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+      color: var(--color-text);
+      margin-bottom: var(--space-xs);
+      line-height: 1.3;
+    }
+    .announcement-card__text { color: var(--color-text-muted); font-size: var(--font-size-sm); margin-bottom: 0; }
+
+    /* House Rules */
+    .house-rules { padding: var(--space-xl) 0; }
+    .house-rules__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-lg); }
+    @media (min-width: 768px) { .house-rules__grid { grid-template-columns: 1fr 1fr; } }
+
+    .house-rules__column {
+      background: rgba(97, 140, 150, 0.04);
+      padding: var(--space-lg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(97, 140, 150, 0.1);
+      transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+    }
+    .house-rules__column:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .house-rules__title {
+      font-family: var(--font-display);
+      font-size: var(--font-size-2xl);
+      color: var(--color-text);
+      margin-bottom: var(--space-lg);
+      position: relative;
+    }
+    .house-rules__title::after {
+      content: '';
+      display: block;
+      width: 48px;
+      height: 3px;
+      background: var(--color-primary);
+      margin-top: var(--space-xs);
+      border-radius: var(--radius-full);
+    }
+
+    .house-rules__list { display: flex; flex-direction: column; gap: var(--space-md); }
+    .house-rules__item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+      font-size: var(--font-size-base);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+
+    .house-rules__bullet {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      margin-top: 2px;
+      background-color: rgba(97, 140, 150, 0.15);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .house-rules__bullet::after {
+      content: '';
+      width: 14px;
+      height: 14px;
+      background-color: var(--color-primary);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E") no-repeat center;
+    }
+
+    .house-rules__column--alt {
+      background: rgba(232, 145, 122, 0.04);
+      border-color: rgba(232, 145, 122, 0.1);
+    }
+    .house-rules__column--alt .house-rules__title::after { background: var(--color-accent); }
+    .house-rules__column--alt .house-rules__bullet {
+      background-color: rgba(232, 145, 122, 0.15);
+    }
+    .house-rules__column--alt .house-rules__bullet::after {
+      background-color: var(--color-accent);
+    }
+
+    /* Team */
+    .team {
+      padding: var(--space-3xl) 0;
+      background: linear-gradient(180deg, var(--color-background) 0%, var(--color-background-alt) 100%);
+    }
+    .team__grid { display: grid; grid-template-columns: repeat(1, 1fr); gap: var(--space-md); }
+    @media (min-width: 600px) { .team__grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 900px) { .team__grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 1200px) { .team__grid { grid-template-columns: repeat(4, 1fr); } }
+    .team-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: var(--space-md);
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: all var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .team-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg); }
+    .team-card__avatar {
+      width: 100%;
+      aspect-ratio: 4/5;
+      margin: 0 auto var(--space-md);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--color-background-alt), var(--color-primary-light));
+    }
+    .team-card__avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .team-card__name {
+      font-family: var(--font-display);
+      font-size: var(--font-size-lg);
+      margin-bottom: var(--space-xs);
+    }
+    .team-card__role { 
+      font-size: var(--font-size-sm); 
+      color: var(--color-primary); 
+      font-weight: 600; 
+      margin-bottom: var(--space-sm);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .team-card__bio {
+      font-size: var(--font-size-sm);
+      color: var(--color-text-muted);
+      line-height: 1.6;
+    }
+
+    /* Contact */
+    .contact { padding: var(--space-3xl) 0; }
+    .contact__grid { display: grid; grid-template-columns: 1fr; gap: var(--space-md); align-items: start; }
+    @media (min-width: 1024px) { .contact__grid { grid-template-columns: 2fr 3fr; } }
+    .contact__item {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+      font-size: var(--font-size-lg);
+    }
+    .contact__icon {
+      width: 48px;
+      height: 48px;
+      background: var(--color-background-alt);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .contact__item-content { flex: 1; }
+    .contact__item-label { font-size: var(--font-size-sm); color: var(--color-text-muted); margin-bottom: 2px; }
+    .contact__item-value { font-weight: 600; color: var(--color-text); }
+    .contact__map {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      aspect-ratio: 16/12;
+      position: relative;
+    }
+    .contact__map-link {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    .contact__map-link img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition-normal);
+    }
+    .contact__map-link:hover img {
+      transform: scale(1.02);
+    }
+    .contact__map-badge {
+      position: absolute;
+      bottom: var(--space-sm);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(45, 58, 53, 0.9);
+      color: white;
+      padding: var(--space-xs) var(--space-md);
+      border-radius: var(--radius-full);
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .contact__map iframe { width: 100%; height: 100%; border: 0; }
+
+    /* Emergency */
+    .emergency {
+      padding: var(--space-xl) 0;
+      background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    }
+    .emergency__inner { text-align: center; color: white; }
+    .emergency__title { font-size: clamp(var(--font-size-2xl), 4vw, var(--font-size-4xl)); color: white; margin-bottom: var(--space-sm); }
+    .emergency__text { opacity: 0.9; margin-bottom: var(--space-md); max-width: 500px; margin-left: auto; margin-right: auto; }
+    .emergency__text a { color: white; text-decoration: underline; text-underline-offset: 4px; }
+    .emergency__number {
+      display: inline-block;
+      font-family: var(--font-display);
+      font-size: var(--font-size-4xl);
+      color: white;
+      padding: var(--space-sm) var(--space-xl);
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(8px);
+      transition: all var(--transition-normal);
+      margin-bottom: var(--space-lg);
+    }
+    .emergency__number:hover { background: rgba(255, 255, 255, 0.25); transform: scale(1.05); color: white; }
+
+    /* Footer */
+    .footer {
+      padding: var(--space-xl) 0 var(--space-lg);
+      background: var(--color-accent);
+      color: rgba(255, 255, 255, 0.8);
+    }
+    .footer__inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-md);
+      text-align: center;
+    }
+    @media (min-width: 1024px) {
+      .footer__inner { flex-direction: row; justify-content: space-between; text-align: left; }
+    }
+    .footer__logo { display: flex; align-items: center; gap: var(--space-sm); }
+    .footer__logo img { height: 40px; width: auto; filter: brightness(0) invert(1); }
+    .footer__logo-text { font-family: var(--font-display); color: white; }
+    .footer__text { font-size: var(--font-size-sm); color: rgba(255, 255, 255, 0.85); max-width: 400px; }
+
+    /* Utilities */
+    .mt-md { margin-top: var(--space-md); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header__inner">
+      <a href="#" class="header__logo">
+        <img data-editable-image="" src="./assets/logo.webp" srcset="./assets/logo-256w.webp 256w, ./assets/logo-384w.webp 384w, ./assets/logo.webp 573w" sizes="191px" alt="Huisartsenpraktijk De Rotonde logo" width="573" height="144">
+      </a>
+      <nav class="nav">
+        <ul class="nav__list" data-repeatable="">
+          <li><a href="#" class="nav__link nav__link" data-editable-link="">Home</a></li>
+          <li><a href="#aankondigingen" class="nav__link nav__link" data-editable-link="">nieuws</a></li>
+          <li><a href="#huisreglement" class="nav__link" data-editable-link="">Praktisch</a></li>
+          <li><a href="#team" class="nav__link" data-editable-link="">Team</a></li>
+          <li><a href="#contact" class="nav__link" data-editable-link="">Contact</a></li>
+        </ul>
+        <a href="https://onlinebooking.myorganizer.online/?gp=SEFQIERyIFJvdG9uZGU%3D&amp;role=OA%3D%3D&amp;language=bmxfQkU%3D" class="btn btn--primary" data-editable-link="">Afspraak maken</a>
+        <a href="tel:093489145" class="btn btn--brand" data-editable-link="">09/348.91.45</a>
+      </nav>
+      <button class="nav-toggle" aria-label="Open menu" onclick="toggleMobileNav()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <nav class="nav-mobile" id="mobileNav">
+      <ul class="nav-mobile__list" data-repeatable="">
+        <li><a href="#" class="nav-mobile__link" data-editable-link="">Home</a></li>
+        <li><a href="#aankondigingen" class="nav-mobile__link" data-editable-link="">Nieuws</a></li>
+        <li><a href="#huisreglement" class="nav-mobile__link" data-editable-link="">Praktisch</a></li>
+        <li><a href="#team" class="nav-mobile__link" data-editable-link="">Team</a></li>
+        <li><a href="#contact" class="nav-mobile__link" data-editable-link="">Contact</a></li>
+        <li><a href="tel:093489145" class="btn btn--brand" style="width: 100%; margin-top: var(--space-sm);" data-editable-link="">09/348.91.45</a></li>
+        <li><a href="https://onlinebooking.myorganizer.online/?gp=SEFQIERyIFJvdG9uZGU%3D&amp;role=OA%3D%3D&amp;language=bmxfQkU%3D" class="btn btn--primary" style="width: 100%; margin-top: var(--space-sm);" data-editable-link="">Afspraak maken</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero__card">
+        <h1 class="hero__title" data-editable="">Huisartsenpraktijk De Rotonde</h1>
+        
+        <!-- Appointment Options -->
+        <div class="appointment-options">
+          <a href="https://onlinebooking.myorganizer.online/?gp=SEFQIERyIFJvdG9uZGU%3D&amp;role=OA%3D%3D&amp;language=bmxfQkU%3D" class="appointment-option appointment-option--accent">
+            <div class="appointment-option__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><path d="M9 16l2 2 4-4"></path></svg>
+            </div>
+            <div class="appointment-option__content">
+              <div class="appointment-option__title" data-editable="">Afspraak maken</div>
+              <div class="appointment-option__subtitle" data-editable="">Online agenda</div>
+            </div>
+            <!-- <div class="appointment-option__arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div> -->
+          </a>
+          <a href="tel:093489145" class="appointment-option">
+            <div class="appointment-option__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </div>
+            <div class="appointment-option__content">
+              <div class="appointment-option__title" data-editable="">Telefoon</div>
+              <div class="appointment-option__phone" data-editable="">09/348.91.45</div>
+            </div>
+            <!-- <div class="appointment-option__arrow">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </div> -->
+          </a>
+          <div class="appointment-option" style="cursor: default;">
+            <div class="appointment-option__icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <div class="appointment-option__content">
+              <div class="appointment-option__title" data-editable="">Openingsuren secretariaat</div>
+              <div class="appointment-option__hours">
+                <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> <span data-editable="">8u - 12u en 15u - 19u</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero__image">
+        <picture>
+          <source media="(max-width: 479px)" srcset="./assets/cover-mobile-480w.webp 480w, ./assets/cover-mobile.webp 900w" sizes="100vw">
+          <source media="(max-width: 1023px)" srcset="./assets/cover-tablet-960w.webp 960w, ./assets/cover-tablet-1200w.webp 1200w, ./assets/cover-tablet.webp 1300w" sizes="100vw">
+          <img data-editable-image="" src="./assets/cover-web-1774010847279.webp" srcset="./assets/cover-desktop-1200w.webp 1200w, ./assets/cover-desktop-1600w.webp 1600w, ./assets/cover-web-1774010847279.webp 1920w" sizes="(min-width: 1024px) 62vw, 100vw" alt="Team Huisartsenpraktijk De Rotonde in de tuin" width="1920" height="1565" fetchpriority="high">
+        </picture>
+      </div>
+    </section>
+
+    <!-- Announcements Section -->
+    <section class="announcements section" id="aankondigingen">
+      <div class="container">
+        <h2 class="section-title" data-editable="">Nieuws</h2>
+        <div class="announcements__grid" data-repeatable="">
+          <div class="announcement-card">
+            <div class="announcement-card__date" data-editable="">April 2026</div>
+            <h3 class="announcement-card__title" data-editable="">Verlof Dr. Konings</h3>
+            <p class="announcement-card__text" data-editable="">Dr. Tine Konings zal afwezig zijn vanaf maandag 20 april tem vrijdag 24 april 2026.</p>
+          </div>
+          
+          
+        </div>
+      </div>
+    </section>
+
+    <!-- House Rules Section -->
+    <section class="house-rules section" id="huisreglement">
+      <div class="container">
+        <h2 class="section-title" data-editable="">Praktisch</h2>
+        <div class="house-rules__grid">
+          <div class="house-rules__column">
+            <h2 class="house-rules__title" data-editable="">Huisreglement</h2>
+            <ul class="house-rules__list" data-repeatable="">
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Consultaties enkel op afspraak. Gelieve 1 afspraak per persoon te maken.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Breng steeds je ID kaart, ISI+ kaart of kids-ID mee op consultatie.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Huisbezoeken moeten steeds telefonisch aangevraagd worden, bij voorkeur voor 10u 's morgens. Deze zijn voorbehouden voor ernstig zieken of immobiele patiënten.</span>
+              </li><li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Gelieve tussen 12u en 15u enkel te bellen voor dringende vragen.</span>
+              </li>
+            </ul>
+          </div>
+          <div class="house-rules__column house-rules__column--alt">
+            <h2 class="house-rules__title" data-editable="">Praktische Info</h2>
+            <ul class="house-rules__list" data-repeatable="">
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Betalen is mogelijk met cash of elektronisch.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">We zijn geconventioneerd: we passen de officiële tarieven van het RIZIV/mutualiteiten toe.</span>
+              </li>
+              <li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Indien u onverwacht ziek wordt en alle online afspraken reeds volzet zijn, kunt u voor een dringende afspraak altijd telefonisch contact opnemen.</span>
+              </li><li class="house-rules__item">
+                <span class="house-rules__bullet"></span>
+                <span data-editable="">Dr. Dries Taelman en Dr. Jelle Van Nieuwenhuyze zijn ook erkend arts voor personeel van politie en defensie.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Team Section -->
+    <section class="team section" id="team">
+      <div class="container">
+        <h2 class="section-title" data-editable="">Ons Team</h2>
+        <div class="team__grid" data-repeatable="">
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/website-foto-dries-geknipt-1774970784376.webp" srcset="./assets/website-foto-dries-geknipt-1774970784376-320w.webp 320w, ./assets/website-foto-dries-geknipt-1774970784376-576w.webp 576w, ./assets/website-foto-dries-geknipt-1774970784376-800w.webp 800w" sizes="(max-width: 599px) calc(100vw - 3rem), (max-width: 899px) calc((100vw - 4.5rem) / 2), (max-width: 1199px) calc((100vw - 6rem) / 3), 270px" alt="Dr. Dries Taelman - Huisarts en Sportarts" width="800" height="1199" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Dries Taelman</h3>
+            <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
+            <p class="team-card__bio" data-editable=""><br></p>
+          </div>
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/dr-jelle-van-nieuwenhuyze-web.webp" srcset="./assets/dr-jelle-van-nieuwenhuyze-web-320w.webp 320w, ./assets/dr-jelle-van-nieuwenhuyze-web-576w.webp 576w, ./assets/dr-jelle-van-nieuwenhuyze-web.webp 800w" sizes="(max-width: 599px) calc(100vw - 3rem), (max-width: 899px) calc((100vw - 4.5rem) / 2), (max-width: 1199px) calc((100vw - 6rem) / 3), 270px" alt="Dr. Jelle Van Nieuwenhuyze - Huisarts en Sportarts" width="800" height="1199" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Jelle Van Nieuwenhuyze</h3>
+            <p class="team-card__role" data-editable="">Huisarts &amp; Sportarts</p>
+            <p class="team-card__bio" data-editable=""><br></p><div><br></div><p></p>
+          </div>
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/dr-tine-konings-web.webp" srcset="./assets/dr-tine-konings-web-320w.webp 320w, ./assets/dr-tine-konings-web-576w.webp 576w, ./assets/dr-tine-konings-web.webp 800w" sizes="(max-width: 599px) calc(100vw - 3rem), (max-width: 899px) calc((100vw - 4.5rem) / 2), (max-width: 1199px) calc((100vw - 6rem) / 3), 270px" alt="Dr. Tine Konings - Huisarts" width="800" height="1199" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Tine Konings</h3>
+            <p class="team-card__role" data-editable="">Huisarts</p>
+            <p class="team-card__bio" data-editable=""><br></p>
+          </div>
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/dr-robbe-de-bruyn-web.webp" srcset="./assets/dr-robbe-de-bruyn-web-320w.webp 320w, ./assets/dr-robbe-de-bruyn-web-576w.webp 576w, ./assets/dr-robbe-de-bruyn-web.webp 800w" sizes="(max-width: 599px) calc(100vw - 3rem), (max-width: 899px) calc((100vw - 4.5rem) / 2), (max-width: 1199px) calc((100vw - 6rem) / 3), 270px" alt="Dr. Robbe De Bruyn - Huisarts" width="800" height="1199" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Robbe De Bruyn</h3>
+            <p class="team-card__role" data-editable="">Huisarts</p>
+            <p class="team-card__bio" data-editable=""><br></p>
+          </div>
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/saartje-de-maesschalck-web.webp" srcset="./assets/saartje-de-maesschalck-web-320w.webp 320w, ./assets/saartje-de-maesschalck-web-576w.webp 576w, ./assets/saartje-de-maesschalck-web.webp 800w" sizes="(max-width: 599px) calc(100vw - 3rem), (max-width: 899px) calc((100vw - 4.5rem) / 2), (max-width: 1199px) calc((100vw - 6rem) / 3), 270px" alt="Saartje De Maesschalck - Verpleegkundige" width="800" height="1199" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Saartje De Maesschalck</h3>
+            <p class="team-card__role" data-editable="">Verpleegkundige</p>
+            <p class="team-card__bio" data-editable="">Onthaal<br>Verpleegkundige taken</p>
+          </div>
+          <div class="team-card">
+            <div class="team-card__avatar">
+              <img data-editable-image="" src="./assets/kelly-snoeck-web.webp" srcset="./assets/kelly-snoeck-web-320w.webp 320w, ./assets/kelly-snoeck-web-576w.webp 576w, ./assets/kelly-snoeck-web.webp 800w" sizes="(max-width: 599px) calc(100vw - 3rem), (max-width: 899px) calc((100vw - 4.5rem) / 2), (max-width: 1199px) calc((100vw - 6rem) / 3), 270px" alt="Kelly Snoeck - Secretariaat" width="800" height="1199" loading="lazy">
+            </div>
+            <h3 class="team-card__name" data-editable="">Kelly Snoeck</h3>
+            <p class="team-card__role" data-editable="">THERAPEUT</p>
+            <p class="team-card__bio" data-editable="">Expertise loopbaanontwikkeling, stress- en burn-out begeleiding en leiderschapsontwikkeling.</p><div><p>Afspraken via: <a href="mailto:kelly@maniola.be">kelly@maniola.be</a></p></div><p></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact section" id="contact">
+      <div class="container">
+        <h2 class="section-title" data-editable="">Contacteer Ons</h2>
+        <div class="contact__grid">
+          <div class="contact__info">
+            <div class="contact__item">
+              <div class="contact__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
+              <div class="contact__item-content">
+                <div class="contact__item-label" data-editable="">Adres</div>
+                <div class="contact__item-value" data-editable="">Gentse Steenweg 143, 9160 Lokeren</div>
+              </div>
+            </div>
+            <div class="contact__item">
+              <div class="contact__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg></div>
+              <div class="contact__item-content">
+                <div class="contact__item-label" data-editable="">Telefoon</div>
+                <div class="contact__item-value">
+                  <a href="tel:093489145" data-editable="">09/348.91.45</a>
+                </div>
+              </div>
+            </div>
+            <div class="contact__item">
+              <div class="contact__icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+              <div class="contact__item-content">
+                <div class="contact__item-label" data-editable="">Openingsuren secretariaat</div>
+                <div class="contact__item-value" data-editable="">&nbsp;8u - 12u en 15u - 19u</div>
+              </div>
+            </div>
+            <a href="https://onlinebooking.myorganizer.online/?gp=SEFQIERyIFJvdG9uZGU%3D&amp;role=OA%3D%3D&amp;language=bmxfQkU%3D" class="btn btn--primary mt-md" data-editable="">Online afspraak maken</a>
+          </div>
+          <div class="contact__map">
+            <a href="https://www.google.com/maps/place/Huisartsenpraktijk+De+Rotonde/@51.1147114,3.9429494,17z/data=!4m15!1m8!3m7!1s0x47c3835494bd01e3:0x2b00e5feb6c14739!2sGentse+Steenweg+143,+9160+Lokeren!3b1!8m2!3d51.1147114!4d3.9429494!16s%2Fg%2F11crrnr9_m!3m5!1s0x47c3838eb9e555c7:0xa566647e60c73e74!8m2!3d51.1146838!4d3.94307!16s%2Fg%2F11fd44zj_m?entry=ttu&amp;g_ep=EgoyMDI2MDEyOC4wIKXMDSoASAFQAw%3D%3D" target="_blank" rel="noopener noreferrer" title="Bekijk locatie op Google Maps - Gentse Steenweg 143, 9160 Lokeren" class="contact__map-link">
+              <img data-editable-image="" src="./assets/map.webp" srcset="./assets/map-640w.webp 640w, ./assets/map-960w.webp 960w, ./assets/map-1280w.webp 1280w, ./assets/map-1516w.webp 1516w" sizes="(max-width: 1023px) calc(100vw - 3rem), 690px" alt="Locatie Huisartsenpraktijk De Rotonde - Gentse Steenweg 143, 9160 Lokeren" width="1516" height="1057" loading="lazy">
+            </a>
+            <span class="contact__map-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -0.1em;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Klik om naar Google Maps te gaan</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Emergency Section -->
+    <section class="emergency">
+      <div class="container">
+        <div class="emergency__inner">
+          <h3 class="emergency__title" data-editable="">Huisartsenwachtdienst</h3>
+          <p class="emergency__text" data-editable="">Tijdens het weekend, op feestdagen of vanaf 18u 's avonds kan u voor dringende medische problemen een beroep doen op de huisartsenwachtpost.</p>
+          <a href="tel:1733" class="emergency__number" data-editable="">Bel 1733</a>
+          <p class="emergency__text" data-editable=""><a href="https://huisartsenwachtdienstwaasland.be/home">huisartsenwachtdienstwaasland.be</a></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__logo">
+          <img data-editable-image="" src="./assets/logo.webp" srcset="./assets/logo-256w.webp 256w, ./assets/logo-384w.webp 384w, ./assets/logo.webp 573w" sizes="159px" alt="Huisartsenpraktijk De Rotonde logo" width="573" height="144" loading="lazy">
+        </div>
+        <p class="footer__text" data-editable="">Huisartsenpraktijk De Rotonde - Medische gegevens worden veilig bewaard.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  function toggleMobileNav() {
+    var nav = document.getElementById('mobileNav');
+    nav.classList.toggle('is-active');
+  }
+  document.addEventListener('click', function(e) {
+    var nav = document.getElementById('mobileNav');
+    var toggle = document.querySelector('.nav-toggle');
+    if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+      nav.classList.remove('is-active');
+    }
+  });
+  </script>
+
+
+
+</body></html>

@@ -12,8 +12,8 @@ import {
  * Toggleable Element Tests (data-toggleable)
  * 
  * Tests the show/hide toggle functionality:
- * - Initially visible elements show "Visible" button
- * - Initially hidden elements show "Show" button  
+ * - Initially visible elements show "Zichtbaar" button
+ * - Initially hidden elements show "Tonen" button  
  * - Hidden elements have reduced opacity in editor
  * - Toggling updates the data-cms-hidden attribute
  */
@@ -28,20 +28,20 @@ test.describe('Toggleable Elements (data-toggleable)', () => {
     await editor.injectTestContent(TEST_TEMPLATE);
   });
 
-  test('visible toggleable should show "Visible" button', async () => {
+  test('visible toggleable should show "Zichtbaar" button', async () => {
     const visibleBanner = preview.getToggleable('#banner-visible');
     await visibleBanner.hover();
     
     const toggleBtn = preview.getToggleButton(visibleBanner);
-    await expect(toggleBtn).toContainText('Visible');
+    await expect(toggleBtn).toContainText('Zichtbaar');
   });
 
-  test('hidden toggleable should show "Show" button', async () => {
+  test('hidden toggleable should show "Tonen" button', async () => {
     const hiddenBanner = preview.getToggleable('#banner-hidden');
     await hiddenBanner.hover();
     
     const toggleBtn = preview.getToggleButton(hiddenBanner);
-    await expect(toggleBtn).toContainText('Show');
+    await expect(toggleBtn).toContainText('Tonen');
   });
 
   test('hidden toggleable should have data-cms-hidden attribute', async () => {
@@ -72,7 +72,7 @@ test.describe('Toggleable Elements (data-toggleable)', () => {
     
     // Should now be hidden
     await expectCmsHidden(visibleBanner);
-    await editor.waitForToast('Element hidden');
+    await editor.waitForToast('Element verborgen');
   });
 
   test('clicking toggle should show hidden element', async () => {
@@ -88,7 +88,7 @@ test.describe('Toggleable Elements (data-toggleable)', () => {
     
     // Should now be visible
     await expectCmsVisible(hiddenBanner);
-    await editor.waitForToast('Element visible');
+    await editor.waitForToast('Element zichtbaar');
   });
 
   test('toggling should update button text after first toggle', async () => {
@@ -97,8 +97,8 @@ test.describe('Toggleable Elements (data-toggleable)', () => {
     
     const toggleBtn = preview.getToggleButton(visibleBanner);
     
-    // Initially shows "Visible"
-    await expect(toggleBtn).toContainText('Visible');
+    // Initially shows Zichtbaar
+    await expect(toggleBtn).toContainText('Zichtbaar');
     
     // Click to hide - button innerHTML gets replaced
     await toggleBtn.click();
@@ -107,9 +107,9 @@ test.describe('Toggleable Elements (data-toggleable)', () => {
     await editor.page.waitForTimeout(100);
     await visibleBanner.hover();
     
-    // After toggle, button should show "Show"
+    // After toggle, button should show Tonen
     const newToggleBtn = preview.getToggleButton(visibleBanner);
-    await expect(newToggleBtn).toContainText('Show');
+    await expect(newToggleBtn).toContainText('Tonen');
     
     // Note: Multiple toggles may not work due to event handler being
     // attached to the original button element which gets replaced.

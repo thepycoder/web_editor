@@ -58,7 +58,7 @@ test.describe('Link Editing (data-editable-link)', () => {
     await expect(link).toHaveAttribute('href', 'https://newsite.com');
     
     // Should show toast
-    await editor.waitForToast('Link updated');
+    await editor.waitForToast('Link bijgewerkt');
   });
 
   test('cancel button should close modal without changes', async () => {

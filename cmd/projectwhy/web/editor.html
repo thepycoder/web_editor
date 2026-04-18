@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="nl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -479,24 +479,24 @@
         <h1>ProjectWhy CMS</h1>
         <span class="file-name" id="file-name" style="display: none;"></span>
         <div class="viewport-buttons" id="viewport-buttons">
-            <button class="viewport-btn active" id="viewport-desktop" title="Desktop view (100%)">
+            <button class="viewport-btn active" id="viewport-desktop" title="Desktopweergave (100%)">
                 <span>🖥️</span>
             </button>
-            <button class="viewport-btn" id="viewport-tablet" title="Tablet view (768px)">
+            <button class="viewport-btn" id="viewport-tablet" title="Tabletweergave (768px)">
                 <span>💻</span>
             </button>
-            <button class="viewport-btn" id="viewport-phone" title="Phone view (375px)">
+            <button class="viewport-btn" id="viewport-phone" title="Telefoonweergave (375px)">
                 <span>📱</span>
             </button>
         </div>
         <button class="btn btn-primary" id="btn-settings">
             <span>⚙️</span> Instellingen
         </button>
-        <button class="btn" id="btn-download-netlify" disabled title="Download current site from your host">
-            <span>☁️</span> Website -> Laptop
+        <button class="btn" id="btn-download-netlify" disabled title="Download de huidige site van je host">
+            <span>☁️</span> Website → laptop
         </button>
         <button class="btn btn-success" id="btn-deploy-netlify" disabled>
-            <span>🚀</span> Laptop -> Website
+            <span>🚀</span> Laptop → website
         </button>
     </header>
 
@@ -519,12 +519,12 @@
     <footer class="status-bar">
         <div class="status-item">
             <div class="status-dot" id="provider-status"></div>
-            <span id="provider-status-text">Deploy: Not configured</span>
+            <span id="provider-status-text">Cloudflare: niet geconfigureerd</span>
         </div>
         <div class="status-item" style="margin-left: auto; gap: 12px; align-items: center;">
-            <button type="button" class="btn" id="btn-stop-server" style="display: none; padding: 4px 10px; font-size: 12px;" title="Stop the local ProjectWhy server">Stop local server</button>
-            <span class="app-version" id="app-version" title="ProjectWhy version"></span>
-            <span id="browser-hint">Chrome/Edge recommended for full functionality</span>
+            <button type="button" class="btn" id="btn-stop-server" style="display: none; padding: 4px 10px; font-size: 12px;" title="Stop de lokale ProjectWhy-server">Lokale server stoppen</button>
+            <span class="app-version" id="app-version" title="ProjectWhy CMS-versie"></span>
+            <span id="browser-hint">Chrome of Edge aanbevolen voor alle functies</span>
         </div>
     </footer>
 
@@ -532,23 +532,23 @@
     <div class="modal-overlay" id="link-modal">
         <div class="modal">
             <div class="modal-header">
-                <h2>Edit Link</h2>
+                <h2>Link bewerken</h2>
                 <button class="modal-close" id="link-close">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>Link Text</label>
-                    <input type="text" id="link-text" placeholder="Click here">
+                    <label>Linktekst</label>
+                    <input type="text" id="link-text" placeholder="Klik hier">
                 </div>
                 <div class="form-group">
                     <label>URL</label>
-                    <input type="text" id="link-url" placeholder="https://example.com">
-                    <small>Use # for placeholder links, or enter a full URL</small>
+                    <input type="text" id="link-url" placeholder="https://voorbeeld.nl">
+                    <small>Gebruik # voor placeholderlinks, of voer een volledige URL in</small>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" id="link-cancel">Cancel</button>
-                <button class="btn btn-primary" id="link-save">Save Link</button>
+                <button class="btn" id="link-cancel">Annuleren</button>
+                <button class="btn btn-primary" id="link-save">Link opslaan</button>
             </div>
         </div>
     </div>
@@ -557,13 +557,13 @@
     <div class="modal-overlay" id="settings-modal">
         <div class="modal" style="width: 550px;">
             <div class="modal-header">
-                <h2>Deploy Settings</h2>
+                <h2>Publicatie-instellingen</h2>
                 <button class="modal-close" id="settings-close">&times;</button>
             </div>
             <div class="modal-body" style="padding: 0;">
                 <div style="padding: 16px 20px 0;">
                     <div class="form-group">
-                        <label>Deploy provider</label>
+                        <label>Publicatieprovider</label>
                         <select id="deploy-provider" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark); color: var(--text); font-size: 13px;">
                             <option value="netlify">Netlify</option>
                             <option value="cloudflare">Cloudflare Pages</option>
@@ -573,49 +573,49 @@
                 <!-- Shared project folder -->
                 <div style="padding: 0 20px 8px;">
                     <div class="form-group">
-                        <label>Project Folder</label>
+                        <label>Projectmap</label>
                         <div style="display: flex; gap: 8px;">
-                            <input type="text" id="project-folder" placeholder="No folder selected" readonly style="flex: 1; cursor: pointer; background: var(--bg-dark);">
-                            <button class="btn" id="btn-select-folder">Select</button>
+                            <input type="text" id="project-folder" placeholder="Geen map gekozen" readonly style="flex: 1; cursor: pointer; background: var(--bg-dark);">
+                            <button class="btn" id="btn-select-folder">Kiezen</button>
                         </div>
-                        <small>Local folder for your project. Will auto-open on startup and sync with your host.</small>
+                        <small>Lokale map voor je project. Wordt bij start automatisch geopend en gesynchroniseerd met je host.</small>
                     </div>
                 </div>
                 <!-- Netlify Panel -->
                 <div id="panel-netlify" style="padding: 0 20px 20px;">
                     <div class="form-group">
-                        <label>Personal Access Token</label>
+                        <label>Persoonlijke toegangstoken</label>
                         <input type="password" id="netlify-token" placeholder="nfp_xxxxxxxxxxxx">
-                        <small>Get your token from <a href="https://app.netlify.com/user/applications#personal-access-tokens" target="_blank" style="color: var(--accent);">Netlify User Settings → Applications → Personal access tokens</a></small>
+                        <small>Haal je token op via <a href="https://app.netlify.com/user/applications#personal-access-tokens" target="_blank" style="color: var(--accent);">Netlify User Settings → Applications → Personal access tokens</a></small>
                     </div>
                     <div class="form-group">
-                        <label>Site ID (optional)</label>
-                        <input type="text" id="netlify-siteId" placeholder="Leave empty to create a new site">
-                        <small>Use an existing site ID to update it, or leave empty to create a new site each deploy</small>
+                        <label>Site-ID (optioneel)</label>
+                        <input type="text" id="netlify-siteId" placeholder="Leeg laten voor een nieuwe site">
+                        <small>Gebruik een bestaande site-ID om bij te werken, of laat leeg om bij elke publicatie een nieuwe site aan te maken</small>
                     </div>
                 </div>
                 <!-- Cloudflare Pages Panel -->
                 <div id="panel-cloudflare" style="padding: 0 20px 20px; display: none;">
                     <div class="form-group">
-                        <label>API Token</label>
-                        <input type="password" id="cloudflare-token" placeholder="Cloudflare API token">
-                        <small>Create at <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color: var(--accent);">Cloudflare dashboard → API Tokens</a> with <strong>Account · Cloudflare Pages · Edit</strong> (and read account).</small>
+                        <label>API-token</label>
+                        <input type="password" id="cloudflare-token" placeholder="Cloudflare API-token">
+                        <small>Maak aan in het <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color: var(--accent);">Cloudflare-dashboard → API Tokens</a> met <strong>Account · Cloudflare Pages · Edit</strong> (en account lezen).</small>
                     </div>
                     <div class="form-group">
-                        <label>Account ID</label>
-                        <input type="text" id="cloudflare-accountId" placeholder="32-character account ID">
-                        <small>Found in the Cloudflare dashboard URL or any zone’s Overview sidebar.</small>
+                        <label>Account-ID</label>
+                        <input type="text" id="cloudflare-accountId" placeholder="32 tekens account-ID">
+                        <small>Te vinden in de Cloudflare-dashboard-URL of in de zijbalk Overview van een zone.</small>
                     </div>
                     <div class="form-group">
-                        <label>Pages project name</label>
-                        <input type="text" id="cloudflare-projectName" placeholder="my-pages-project">
-                        <small>Direct Upload project name (create once in Pages or we create it on first deploy).</small>
+                        <label>Pages-projectnaam</label>
+                        <input type="text" id="cloudflare-projectName" placeholder="mijn-pages-project">
+                        <small>Naam voor Direct Upload (eenmalig aanmaken in Pages of we maken hem bij eerste publicatie).</small>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn" id="settings-cancel">Cancel</button>
-                <button class="btn btn-primary" id="settings-save">Save Configuration</button>
+                <button class="btn" id="settings-cancel">Annuleren</button>
+                <button class="btn btn-primary" id="settings-save">Configuratie opslaan</button>
             </div>
         </div>
     </div>
@@ -624,8 +624,8 @@
     <div id="startup-loader" class="startup-loader" role="status" aria-live="polite" aria-busy="false">
         <div class="startup-loader-inner">
             <div class="startup-spinner" aria-hidden="true"></div>
-            <p class="startup-loader-title">ProjectWhy</p>
-            <p class="startup-loader-msg" id="startup-loader-msg">Preparing your project…</p>
+            <p class="startup-loader-title">ProjectWhy CMS</p>
+            <p class="startup-loader-msg" id="startup-loader-msg">Je project wordt voorbereid…</p>
         </div>
     </div>
 
@@ -784,11 +784,11 @@
             if (state.backend === 'http') {
                 stopBtn.style.display = 'flex';
                 selectBtn.style.display = 'none';
-                if (hint) hint.textContent = 'Local server — close the console window or use Stop to quit.';
+                if (hint) hint.textContent = 'Lokale server — sluit het consolevenster of gebruik Stop om af te sluiten.';
             } else {
                 stopBtn.style.display = 'none';
                 selectBtn.style.display = '';
-                if (hint) hint.textContent = 'Chrome/Edge recommended for full functionality';
+                if (hint) hint.textContent = 'Chrome of Edge aanbevolen voor alle functies';
             }
         }
 
@@ -863,7 +863,7 @@
             $('cloudflare-token').value = state.cloudflareConfig.apiToken || '';
             $('cloudflare-accountId').value = state.cloudflareConfig.accountId || '';
             $('cloudflare-projectName').value = state.cloudflareConfig.projectName || '';
-            $('project-folder').value = state.httpProjectDir || '(local server)';
+            $('project-folder').value = state.httpProjectDir || '(lokale server)';
             syncProviderPanels();
             updateProviderStatus();
         }
@@ -885,13 +885,13 @@
                 state.project.assetsHandle = null;
                 state.project.httpOpen = true;
                 state.project.hasIndexHtml = false;
-                $('file-name').textContent = 'Project (empty)';
+                $('file-name').textContent = 'Project (leeg)';
                 $('file-name').style.display = 'block';
                 $('empty-state').style.display = 'flex';
                 $('preview-wrapper').style.display = 'none';
                 updateDeployButtons();
                 showToast(
-                    "This folder has no index.html yet—that's normal for a new project. Add a template or pull from Netlify when you're ready.",
+                    'Deze map heeft nog geen index.html — dat is normaal voor een nieuw project. Voeg een sjabloon toe of haal van Netlify binnen als je zover bent.',
                     'info'
                 );
                 return;
@@ -922,7 +922,7 @@
 
             state.content.original = content;
 
-            $('file-name').textContent = state.httpProjectDir.split(/[/\\]/).filter(Boolean).pop() || 'Project';
+            $('file-name').textContent = state.httpProjectDir.split(/[/\\]/).filter(Boolean).pop() || 'Projectmap';
             $('file-name').style.display = 'block';
             $('empty-state').style.display = 'none';
             $('preview-wrapper').style.display = 'block';
@@ -930,7 +930,7 @@
             renderPreview(content);
             updateDeployButtons();
             if (!skipOpenedToast) {
-                showToast('Opened project (local server)', 'success');
+                showToast('Project geopend (lokale server)', 'success');
             }
         }
 
@@ -951,21 +951,21 @@
                 state.httpProjectDir = data.projectDir || '';
                 syncAppVersionLabel(data);
                 updateLocalServerUI();
-                showStartupLoader('Syncing website from host…');
+                showStartupLoader('Website synchroniseren met host…');
                 try {
                     await syncHttpProjectConfig();
                     if (canDownloadFromHost()) {
-                        setStartupLoaderMessage('Downloading latest from website (Website → Laptop)…');
+                        setStartupLoaderMessage('Laatste versie downloaden van website (Website → laptop)…');
                         const pulled = await runDownload();
                         if (!pulled) {
                             await loadHttpProjectContent();
                         }
                     } else {
-                        setStartupLoaderMessage('Loading local project…');
+                        setStartupLoaderMessage('Lokaal project laden…');
                         await loadHttpProjectContent();
                     }
                 } catch (err) {
-                    showToast('Failed to load project: ' + err.message, 'error');
+                    showToast('Project laden mislukt: ' + err.message, 'error');
                     try {
                         await loadHttpProjectContent();
                     } catch (e2) {
@@ -987,7 +987,7 @@
                 await syncHttpProjectConfig();
                 await loadHttpProjectContent();
             } catch (err) {
-                showToast('Failed to open project: ' + err.message, 'error');
+                showToast('Project openen mislukt: ' + err.message, 'error');
             }
         }
 
@@ -1187,11 +1187,11 @@
                     // No index.html - folder is set but empty
                     state.project.dirHandle = dirHandle;
                     state.project.assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
-                    $('file-name').textContent = dirHandle.name + ' (empty)';
+                    $('file-name').textContent = dirHandle.name + ' (leeg)';
                     $('file-name').style.display = 'block';
                     updateDeployButtons();
                     showToast(
-                        "This folder has no index.html yet—that's normal for a new project. You can import a site from a URL or add files when you're ready.",
+                        'Deze map heeft nog geen index.html — dat is normaal voor een nieuw project. Je kunt later een site importeren of bestanden toevoegen.',
                         'info'
                     );
                     return;
@@ -1233,10 +1233,10 @@
                 
                 renderPreview(content);
                 updateDeployButtons();
-                showToast(`Opened project: ${dirHandle.name}`, 'success');
+                showToast(`Project geopend: ${dirHandle.name}`, 'success');
             } catch (err) {
                 if (err.name !== 'AbortError') {
-                    showToast('Failed to open project: ' + err.message, 'error');
+                    showToast('Project openen mislukt: ' + err.message, 'error');
                 }
             }
         }
@@ -1724,15 +1724,15 @@
                     }
                     
                     updateToggleButton(toolbar, newHidden);
-                    showToast(newHidden ? 'Element hidden' : 'Element visible', 'success');
+                    showToast(newHidden ? 'Element verborgen' : 'Element zichtbaar', 'success');
                 });
             });
         }
         
         function updateToggleButton(toolbar, isHidden) {
             toolbar.innerHTML = isHidden
-                ? `<button class="cms-toggle-btn hidden" title="Show this element">👁️‍🗨️ Show</button>`
-                : `<button class="cms-toggle-btn" title="Hide this element">👁️ Visible</button>`;
+                ? `<button class="cms-toggle-btn hidden" title="Dit element tonen">👁️‍🗨️ Tonen</button>`
+                : `<button class="cms-toggle-btn" title="Dit element verbergen">👁️ Zichtbaar</button>`;
         }
 
         function setupRepeatableSections(doc) {
@@ -1755,8 +1755,8 @@
             const toolbar = doc.createElement('div');
             toolbar.className = 'cms-section-toolbar';
             toolbar.innerHTML = `
-                <button class="cms-section-btn duplicate" title="Duplicate">➕ Duplicate</button>
-                <button class="cms-section-btn delete" title="Delete">🗑️ Delete</button>
+                <button class="cms-section-btn duplicate" title="Dupliceren">➕ Dupliceren</button>
+                <button class="cms-section-btn delete" title="Verwijderen">🗑️ Verwijderen</button>
             `;
             element.appendChild(toolbar);
             
@@ -1767,7 +1767,7 @@
                 element.parentNode.insertBefore(clone, element.nextSibling);
                 setupEditableElements(doc);
                 attachSectionToolbar(clone, container, doc);
-                showToast('Section duplicated', 'success');
+                showToast('Sectie gedupliceerd', 'success');
             });
             
             // Setup delete button
@@ -1775,9 +1775,9 @@
                 e.stopPropagation();
                 if (container.children.length > 1) {
                     element.remove();
-                    showToast('Section deleted', 'success');
+                    showToast('Sectie verwijderd', 'success');
                 } else {
-                    showToast('Cannot delete the last item', 'error');
+                    showToast('Kan het laatste item niet verwijderen', 'error');
                 }
             });
         }
@@ -1901,7 +1901,7 @@
             const fsReady = state.backend !== 'http' && state.project.assetsHandle;
             const httpReady = state.backend === 'http' && state.project.httpOpen;
             if (!fsReady && !httpReady) {
-                showToast('Please open a project folder first', 'error');
+                showToast('Open eerst een projectmap', 'error');
                 $('image-input').value = '';
                 state.ui.currentImageElement = null;
                 return;
@@ -1948,9 +1948,9 @@
                     await deleteReplacedImageAssets(previewDoc, img, [newFilename], previousAssetNames);
                 }
 
-                showToast('Image replaced', 'success');
+                showToast('Afbeelding vervangen', 'success');
             } catch (err) {
-                showToast('Failed to replace image: ' + err.message, 'error');
+                showToast('Afbeelding vervangen mislukt: ' + err.message, 'error');
             }
 
             $('image-input').value = '';
@@ -2000,7 +2000,7 @@
 
         async function selectProjectFolder() {
             if (state.backend === 'http') {
-                showToast('Project folder is fixed when using the ProjectWhy desktop app.', 'info');
+                showToast('De projectmap is vastgezet in de ProjectWhy-desktopapp.', 'info');
                 return;
             }
             try {
@@ -2009,7 +2009,7 @@
                 await openProject(dirHandle);
             } catch (err) {
                 if (err.name !== 'AbortError') {
-                    showToast('Failed to select folder: ' + err.message, 'error');
+                    showToast('Map kiezen mislukt: ' + err.message, 'error');
                 }
             }
         }
@@ -2041,11 +2041,11 @@
         function updateProviderStatus() {
             const p = normalizeDeployProvider(state.deployProvider);
             let configured = false;
-            let detail = 'Not configured';
+            let detail = 'niet geconfigureerd';
             if (p === 'netlify') {
                 configured = !!(state.netlifyConfig && state.netlifyConfig.token);
                 if (configured) {
-                    detail = state.netlifyConfig.siteId ? `Site: ${state.netlifyConfig.siteId}` : 'New site on deploy';
+                    detail = state.netlifyConfig.siteId ? `Site: ${state.netlifyConfig.siteId}` : 'Nieuwe site bij publicatie';
                 }
                 $('provider-status-text').textContent = `Netlify: ${detail}`;
             } else {
@@ -2168,10 +2168,10 @@
             const mergeKey = 'cf-deploy';
 
             try {
-                showToast('Starting Cloudflare Pages deployment...', 'info', { mergeKey });
+                showToast('Cloudflare Pages-publicatie starten…', 'info', { mergeKey });
                 $('btn-deploy-netlify').disabled = true;
 
-                showToast('Preparing project...', 'info', { mergeKey });
+                showToast('Project voorbereiden…', 'info', { mergeKey });
                 const projCheck = await fetch(
                     `${cloudflareApiBase()}/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}`,
                     { headers: { Authorization: `Bearer ${c.apiToken}` } }
@@ -2196,7 +2196,7 @@
                 );
 
                 const { indexHtml, headersContent, assetBuffers } = await collectDeployFiles();
-                showToast('Hashing files...', 'info', { mergeKey });
+                showToast('Bestanden hashen…', 'info', { mergeKey });
 
                 /** @type {Map<string, { relativePath: string, buffer: ArrayBuffer, hash: string, contentType: string }>} */
                 const byPath = new Map();
@@ -2238,7 +2238,7 @@
                 for (const f of toUpload) {
                     up++;
                     if (toUpload.length > 1) {
-                        showToast(`Uploading assets... (${up}/${toUpload.length})`, 'info', { mergeKey });
+                        showToast(`Assets uploaden… (${up}/${toUpload.length})`, 'info', { mergeKey });
                     }
                     const b64 = uint8ToBase64(new Uint8Array(f.buffer));
                     const payload = [
@@ -2279,7 +2279,7 @@
                 form.append('manifest', JSON.stringify(manifest));
                 form.append('branch', 'main');
                 form.append('commit_hash', Array.from(crypto.getRandomValues(new Uint8Array(20))).map((b) => b.toString(16).padStart(2, '0')).join(''));
-                form.append('commit_message', 'ProjectWhy deploy');
+                form.append('commit_message', 'ProjectWhy-publicatie');
                 form.append('commit_dirty', 'false');
                 const hdrBlob = new Blob([headersContent], { type: 'text/plain' });
                 form.append('_headers', new File([hdrBlob], '_headers', { type: 'text/plain' }));
@@ -2291,17 +2291,17 @@
 
                 const siteUrl = deployment.url || deployment.latest_stage?.url || '';
                 dismissMergeToast(mergeKey);
-                showToast('Deployed to Cloudflare Pages!', 'success');
+                showToast('Gepubliceerd naar Cloudflare Pages!', 'success');
                 if (siteUrl) {
                     setTimeout(() => {
-                        if (confirm(`Deployment successful!\n\nOpen ${siteUrl}?`)) {
+                        if (confirm(`Publicatie gelukt!\n\n${siteUrl} openen?`)) {
                             window.open(siteUrl, '_blank');
                         }
                     }, 500);
                 }
             } catch (err) {
                 dismissMergeToast('cf-deploy');
-                showToast('Cloudflare deployment failed: ' + err.message, 'error');
+                showToast('Cloudflare-publicatie mislukt: ' + err.message, 'error');
                 console.error(err);
             } finally {
                 updateDeployButtons();
@@ -2344,7 +2344,7 @@
             if (!canDeploy) return;
 
             try {
-                showToast('Starting Netlify deployment...', 'info', { mergeKey: 'netlify-deploy' });
+                showToast('Netlify-publicatie starten…', 'info', { mergeKey: 'netlify-deploy' });
                 $('btn-deploy-netlify').disabled = true;
 
                 const { indexHtml, headersContent, assetBuffers } = await collectDeployFiles();
@@ -2378,10 +2378,10 @@
                     await persistProviderConfigToProject();
                     updateProviderStatus();
 
-                    showToast(`Created new site: ${siteUrl}`, 'info', { mergeKey: 'netlify-deploy' });
+                    showToast(`Nieuwe site aangemaakt: ${siteUrl}`, 'info', { mergeKey: 'netlify-deploy' });
                 }
 
-                showToast('Scanning assets...', 'info', { mergeKey: 'netlify-deploy' });
+                showToast('Assets verkennen…', 'info', { mergeKey: 'netlify-deploy' });
                 const files = {};
                 const fileContents = new Map();
 
@@ -2451,7 +2451,7 @@
                     uploadedCount++;
                     if (uniqueRequiredInManifest > 1) {
                         showToast(
-                            `Uploading... (${uploadedCount}/${uniqueRequiredInManifest})`,
+                            `Uploaden… (${uploadedCount}/${uniqueRequiredInManifest})`,
                             'info',
                             { mergeKey: 'netlify-deploy' }
                         );
@@ -2459,18 +2459,18 @@
                 }
 
                 dismissMergeToast('netlify-deploy');
-                showToast(`Deployed to Netlify!`, 'success');
+                showToast('Gepubliceerd naar Netlify!', 'success');
                 
                 // Open the deployed site
                 setTimeout(() => {
-                    if (confirm(`Deployment successful!\n\nOpen ${siteUrl}?`)) {
+                    if (confirm(`Publicatie gelukt!\n\n${siteUrl} openen?`)) {
                         window.open(siteUrl, '_blank');
                     }
                 }, 500);
                 
             } catch (err) {
                 dismissMergeToast('netlify-deploy');
-                showToast('Netlify deployment failed: ' + err.message, 'error');
+                showToast('Netlify-publicatie mislukt: ' + err.message, 'error');
                 console.error('Netlify deployment error:', err);
             } finally {
                 updateDeployButtons();
@@ -2507,7 +2507,7 @@
         // ============================================
         async function downloadFromNetlify() {
             if (!state.netlifyConfig?.token || !state.netlifyConfig?.siteId) {
-                showToast('Please configure Netlify with a Site ID first', 'error');
+                showToast('Stel eerst een Netlify-site-ID in', 'error');
                 return false;
             }
 
@@ -2521,19 +2521,19 @@
                 if (state.backend !== 'http') {
                     dirHandle = await idb.load();
                     if (!dirHandle) {
-                        showToast('Select a folder to save the project...', 'info', { mergeKey: 'netlify-pull' });
+                        showToast('Kies een map om het project op te slaan…', 'info', { mergeKey: 'netlify-pull' });
                         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                         await idb.save(dirHandle);
                         $('project-folder').value = dirHandle.name;
                     } else {
                         const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
                         if (permission !== 'granted') {
-                            throw new Error('Permission denied for project folder');
+                            throw new Error('Geen toegang tot de projectmap');
                         }
                     }
                 }
 
-                showToast('Fetching site information...', 'info', { mergeKey: 'netlify-pull' });
+                showToast('Site-informatie ophalen…', 'info', { mergeKey: 'netlify-pull' });
                 const nBase = netlifyApiBase();
 
                 const siteResponse = await fetch(
@@ -2541,22 +2541,22 @@
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (!siteResponse.ok) {
-                    throw new Error('Failed to fetch site info. Check your Site ID and token.');
+                    throw new Error('Site-info ophalen mislukt. Controleer je site-ID en token.');
                 }
                 const siteData = await siteResponse.json();
                 const filesOrigin = netlifyFilesOrigin(siteData);
                 if (!filesOrigin) {
-                    throw new Error('Could not resolve Netlify deploy URL (missing subdomain/name).');
+                    throw new Error('Kon Netlify-deploy-URL niet bepalen (subdomein/naam ontbreekt).');
                 }
 
                 // Step 3: Get list of all files via Netlify API
-                showToast('Fetching file list...', 'info', { mergeKey: 'netlify-pull' });
+                showToast('Bestandslijst ophalen…', 'info', { mergeKey: 'netlify-pull' });
                 const filesResponse = await fetch(
                     `${nBase}/api/v1/sites/${siteId}/files`,
                     { headers: { 'Authorization': `Bearer ${token}` } }
                 );
                 if (!filesResponse.ok) {
-                    throw new Error('Failed to fetch file list.');
+                    throw new Error('Bestandslijst ophalen mislukt.');
                 }
                 const files = await filesResponse.json();
 
@@ -2565,21 +2565,21 @@
                 const remoteAssetNames = new Set(assetFiles.map(f => f.path.replace('/assets/', '')));
 
                 if (!indexFile) {
-                    throw new Error('No index.html found on the deployed site.');
+                    throw new Error('Geen index.html op de gepubliceerde site gevonden.');
                 }
 
                 // Step 4: Download index.html
-                showToast('Downloading index.html...', 'info', { mergeKey: 'netlify-pull' });
+                showToast('index.html downloaden…', 'info', { mergeKey: 'netlify-pull' });
                 const htmlResponse = await fetch(`${filesOrigin}/index.html`);
                 if (!htmlResponse.ok) {
-                    throw new Error(`Failed to download index.html: ${htmlResponse.status}`);
+                    throw new Error(`index.html downloaden mislukt: ${htmlResponse.status}`);
                 }
                 const html = await htmlResponse.text();
 
                 // Step 5: Download assets
                 const assetBlobs = new Map();
                 if (assetFiles.length > 0) {
-                    showToast(`Downloading ${assetFiles.length} assets...`, 'info', { mergeKey: 'netlify-pull' });
+                    showToast(`${assetFiles.length} assets downloaden…`, 'info', { mergeKey: 'netlify-pull' });
                     let downloaded = 0;
 
                     await Promise.all(assetFiles.map(async (file) => {
@@ -2593,17 +2593,17 @@
                         }
                         downloaded++;
                         if (downloaded % 3 === 0 || downloaded === assetFiles.length) {
-                            showToast(`Downloading assets... (${downloaded}/${assetFiles.length})`, 'info', { mergeKey: 'netlify-pull' });
+                            showToast(`Assets downloaden… (${downloaded}/${assetFiles.length})`, 'info', { mergeKey: 'netlify-pull' });
                         }
                     }));
                 }
 
-                showToast('Syncing files...', 'info', { mergeKey: 'netlify-pull' });
+                showToast('Bestanden synchroniseren…', 'info', { mergeKey: 'netlify-pull' });
 
                 await writeDownloadedFilesToProject(html, assetBlobs, remoteAssetNames, dirHandle);
 
                 dismissMergeToast('netlify-pull');
-                showToast('Sync complete! Opening project...', 'success');
+                showToast('Synchronisatie voltooid! Project openen…', 'success');
 
                 if (state.backend === 'http') {
                     await loadHttpProjectContent({ skipOpenedToast: true });
@@ -2616,9 +2616,9 @@
                     dismissMergeToast('netlify-pull');
                     let msg = err.message;
                     if (msg === 'Failed to fetch' || (err instanceof TypeError && msg.includes('fetch'))) {
-                        msg += ' — open the editor via a local HTTP server (not file://), or add Access-Control-Allow-Origin on Netlify for /index.html and /assets/*';
+                        msg += ' — open de editor via een lokale HTTP-server (niet file://), of voeg Access-Control-Allow-Origin toe op Netlify voor /index.html en /assets/*';
                     }
-                    showToast('Download failed: ' + msg, 'error');
+                    showToast('Download mislukt: ' + msg, 'error');
                     console.error('Download from Netlify error:', err);
                 }
                 return false;
@@ -2644,7 +2644,7 @@
         async function downloadFromCloudflarePages() {
             const c = state.cloudflareConfig || {};
             if (!c.apiToken || !c.accountId || !c.projectName) {
-                showToast('Configure Cloudflare API token, account ID, and project name', 'error');
+                showToast('Stel Cloudflare API-token, account-ID en projectnaam in', 'error');
                 return false;
             }
             const accountId = c.accountId.trim();
@@ -2658,19 +2658,19 @@
                 if (state.backend !== 'http') {
                     dirHandle = await idb.load();
                     if (!dirHandle) {
-                        showToast('Select a folder to save the project...', 'info', { mergeKey });
+                        showToast('Kies een map om het project op te slaan…', 'info', { mergeKey });
                         dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
                         await idb.save(dirHandle);
                         $('project-folder').value = dirHandle.name;
                     } else {
                         const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
                         if (permission !== 'granted') {
-                            throw new Error('Permission denied for project folder');
+                            throw new Error('Geen toegang tot de projectmap');
                         }
                     }
                 }
 
-                showToast('Fetching deployments...', 'info', { mergeKey });
+                showToast('Deployments ophalen…', 'info', { mergeKey });
                 const rawList = await cfApiResult(
                     `/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}/deployments?per_page=25`
                 );
@@ -2679,14 +2679,14 @@
                     .filter((d) => d && d.url)
                     .sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0))[0];
                 if (!latest || !latest.url) {
-                    throw new Error('No deployment URL found. Deploy at least once from this project.');
+                    throw new Error('Geen deployment-URL gevonden. Publiceer minstens een keer vanuit dit project.');
                 }
                 const origin = latest.url.replace(/\/$/, '');
 
-                showToast('Downloading index.html...', 'info', { mergeKey });
+                showToast('index.html downloaden…', 'info', { mergeKey });
                 const htmlResponse = await fetch(`${origin}/index.html`);
                 if (!htmlResponse.ok) {
-                    throw new Error(`Failed to download index.html: ${htmlResponse.status}`);
+                    throw new Error(`index.html downloaden mislukt: ${htmlResponse.status}`);
                 }
                 const html = await htmlResponse.text();
 
@@ -2698,7 +2698,7 @@
                 const namesArr = [...remoteNames];
                 for (const name of namesArr) {
                     i++;
-                    showToast(`Downloading assets... (${i}/${namesArr.length})`, 'info', { mergeKey });
+                    showToast(`Assets downloaden… (${i}/${namesArr.length})`, 'info', { mergeKey });
                     try {
                         const response = await fetch(`${origin}/assets/${encodeURIComponent(name)}`);
                         if (response.ok) {
@@ -2709,11 +2709,11 @@
                     }
                 }
 
-                showToast('Syncing files...', 'info', { mergeKey });
+                showToast('Bestanden synchroniseren…', 'info', { mergeKey });
                 await writeDownloadedFilesToProject(html, assetBlobs, remoteAssetNames, dirHandle);
 
                 dismissMergeToast(mergeKey);
-                showToast('Sync complete! Opening project...', 'success');
+                showToast('Synchronisatie voltooid! Project openen…', 'success');
 
                 if (state.backend === 'http') {
                     await loadHttpProjectContent({ skipOpenedToast: true });
@@ -2726,9 +2726,9 @@
                     dismissMergeToast(mergeKey);
                     let msg = err.message;
                     if (msg === 'Failed to fetch' || (err instanceof TypeError && msg.includes('fetch'))) {
-                        msg += ' — use the local ProjectWhy server (not file://) if the browser blocks fetches to your Pages URL';
+                        msg += ' — gebruik de lokale ProjectWhy-server (niet file://) als de browser requests naar je Pages-URL blokkeert';
                     }
-                    showToast('Download failed: ' + msg, 'error');
+                    showToast('Download mislukt: ' + msg, 'error');
                     console.error('Download from Cloudflare error:', err);
                 }
                 return false;
@@ -2790,7 +2790,7 @@
         $('settings-save').addEventListener('click', async () => {
             await saveProviderConfig();
             closeModal('settings-modal');
-            showToast('Configuration saved', 'success');
+            showToast('Configuratie opgeslagen', 'success');
         });
         $('deploy-provider').addEventListener('change', () => {
             state.deployProvider = normalizeDeployProvider($('deploy-provider').value);
@@ -2803,9 +2803,9 @@
         $('btn-stop-server').addEventListener('click', async () => {
             try {
                 await fetch('/api/shutdown', { method: 'POST' });
-                showToast('Local server stopped. You can close this tab.', 'success');
+                showToast('Lokale server gestopt. Je kunt dit tabblad sluiten.', 'success');
             } catch (err) {
-                showToast('Server may have stopped (connection closed).', 'info');
+                showToast('Server is mogelijk gestopt (verbinding verbroken).', 'info');
             }
         });
 
@@ -2827,7 +2827,7 @@
             if (state.ui.currentLinkElement) {
                 state.ui.currentLinkElement.textContent = $('link-text').value;
                 state.ui.currentLinkElement.setAttribute('href', $('link-url').value || '#');
-                showToast('Link updated', 'success');
+                showToast('Link bijgewerkt', 'success');
             }
             closeModal('link-modal');
             state.ui.currentLinkElement = null;

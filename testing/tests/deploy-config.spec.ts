@@ -85,7 +85,7 @@ test.describe('Deploy configuration', () => {
     await settings.setToken('test-token');
     await settings.save();
     
-    await editor.waitForToast('Configuration saved');
+    await editor.waitForToast('Configuratie opgeslagen');
   });
 
   test('config values should update state correctly', async ({ page }) => {
@@ -120,8 +120,8 @@ test.describe('Deploy configuration', () => {
     await expect(editor.btnDeployNetlify).toBeEnabled();
   });
 
-  test('status indicator should show "Not configured" initially', async () => {
-    await expect(editor.providerStatusText).toContainText('Not configured');
+  test('status indicator should show "niet geconfigureerd" initially', async () => {
+    await expect(editor.providerStatusText).toContainText('niet geconfigureerd');
   });
 
   test('status indicator should update after saving config', async () => {
@@ -129,7 +129,7 @@ test.describe('Deploy configuration', () => {
     await settings.setToken('my-token');
     await settings.save();
     
-    await expect(editor.providerStatusText).toContainText('New site on deploy');
+    await expect(editor.providerStatusText).toContainText('Nieuwe site bij publicatie');
   });
 
   test('status indicator should show site ID when configured', async () => {
