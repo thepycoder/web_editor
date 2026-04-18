@@ -240,6 +240,56 @@
             line-height: 1.6;
         }
 
+        /* Fullscreen startup / sync loader (local server first load) */
+        .startup-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 100000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: rgba(13, 17, 23, 0.92);
+            backdrop-filter: blur(6px);
+        }
+
+        .startup-loader.active {
+            display: flex;
+        }
+
+        .startup-loader-inner {
+            text-align: center;
+            max-width: 22rem;
+            padding: 24px;
+        }
+
+        .startup-spinner {
+            width: 44px;
+            height: 44px;
+            margin: 0 auto 20px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: startup-spin 0.85s linear infinite;
+        }
+
+        @keyframes startup-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .startup-loader-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 8px;
+        }
+
+        .startup-loader-msg {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
         /* Modal */
         .modal-overlay {
             position: fixed;
@@ -442,7 +492,7 @@
         <button class="btn btn-primary" id="btn-settings">
             <span>⚙️</span> Instellingen
         </button>
-        <button class="btn" id="btn-download-netlify" disabled title="Download current site from Netlify">
+        <button class="btn" id="btn-download-netlify" disabled title="Download current site from your host">
             <span>☁️</span> Website -> Laptop
         </button>
         <button class="btn btn-success" id="btn-deploy-netlify" disabled>
@@ -468,8 +518,8 @@
 
     <footer class="status-bar">
         <div class="status-item">
-            <div class="status-dot" id="netlify-status"></div>
-            <span id="netlify-status-text">Netlify: Not configured</span>
+            <div class="status-dot" id="provider-status"></div>
+            <span id="provider-status-text">Deploy: Not configured</span>
         </div>
         <div class="status-item" style="margin-left: auto; gap: 12px; align-items: center;">
             <button type="button" class="btn" id="btn-stop-server" style="display: none; padding: 4px 10px; font-size: 12px;" title="Stop the local ProjectWhy server">Stop local server</button>
@@ -511,17 +561,28 @@
                 <button class="modal-close" id="settings-close">&times;</button>
             </div>
             <div class="modal-body" style="padding: 0;">
-                
-                <!-- Netlify Panel -->
-                <div id="panel-netlify" style="padding: 20px;">
+                <div style="padding: 16px 20px 0;">
+                    <div class="form-group">
+                        <label>Deploy provider</label>
+                        <select id="deploy-provider" style="width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark); color: var(--text); font-size: 13px;">
+                            <option value="netlify">Netlify</option>
+                            <option value="cloudflare">Cloudflare Pages</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Shared project folder -->
+                <div style="padding: 0 20px 8px;">
                     <div class="form-group">
                         <label>Project Folder</label>
                         <div style="display: flex; gap: 8px;">
                             <input type="text" id="project-folder" placeholder="No folder selected" readonly style="flex: 1; cursor: pointer; background: var(--bg-dark);">
                             <button class="btn" id="btn-select-folder">Select</button>
                         </div>
-                        <small>Local folder for your project. Will auto-open on startup and sync with Netlify.</small>
+                        <small>Local folder for your project. Will auto-open on startup and sync with your host.</small>
                     </div>
+                </div>
+                <!-- Netlify Panel -->
+                <div id="panel-netlify" style="padding: 0 20px 20px;">
                     <div class="form-group">
                         <label>Personal Access Token</label>
                         <input type="password" id="netlify-token" placeholder="nfp_xxxxxxxxxxxx">
@@ -533,12 +594,38 @@
                         <small>Use an existing site ID to update it, or leave empty to create a new site each deploy</small>
                     </div>
                 </div>
-                
+                <!-- Cloudflare Pages Panel -->
+                <div id="panel-cloudflare" style="padding: 0 20px 20px; display: none;">
+                    <div class="form-group">
+                        <label>API Token</label>
+                        <input type="password" id="cloudflare-token" placeholder="Cloudflare API token">
+                        <small>Create at <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" style="color: var(--accent);">Cloudflare dashboard → API Tokens</a> with <strong>Account · Cloudflare Pages · Edit</strong> (and read account).</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Account ID</label>
+                        <input type="text" id="cloudflare-accountId" placeholder="32-character account ID">
+                        <small>Found in the Cloudflare dashboard URL or any zone’s Overview sidebar.</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Pages project name</label>
+                        <input type="text" id="cloudflare-projectName" placeholder="my-pages-project">
+                        <small>Direct Upload project name (create once in Pages or we create it on first deploy).</small>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn" id="settings-cancel">Cancel</button>
                 <button class="btn btn-primary" id="settings-save">Save Configuration</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen loader: host sync on local-server startup -->
+    <div id="startup-loader" class="startup-loader" role="status" aria-live="polite" aria-busy="false">
+        <div class="startup-loader-inner">
+            <div class="startup-spinner" aria-hidden="true"></div>
+            <p class="startup-loader-title">ProjectWhy</p>
+            <p class="startup-loader-msg" id="startup-loader-msg">Preparing your project…</p>
         </div>
     </div>
 
@@ -568,8 +655,9 @@
             },
             // Asset blob URLs for preview rendering
             assetBlobUrls: new Map(),
-            // Netlify configuration
+            deployProvider: 'cloudflare',
             netlifyConfig: null,
+            cloudflareConfig: null,
             // UI state
             ui: {
                 viewport: 'desktop',
@@ -585,6 +673,97 @@
 
         function netlifyApiBase() {
             return state.backend === 'http' ? '/api/netlify' : 'https://api.netlify.com';
+        }
+
+        function cloudflareApiBase() {
+            return state.backend === 'http' ? '/api/cloudflare' : 'https://api.cloudflare.com';
+        }
+
+        function normalizeDeployProvider(p) {
+            return p === 'cloudflare' ? 'cloudflare' : 'netlify';
+        }
+
+        function syncProviderPanels() {
+            const p = normalizeDeployProvider(state.deployProvider);
+            const sel = $('deploy-provider');
+            if (sel) sel.value = p;
+            const pn = $('panel-netlify');
+            const pc = $('panel-cloudflare');
+            if (pn) pn.style.display = p === 'netlify' ? 'block' : 'none';
+            if (pc) pc.style.display = p === 'cloudflare' ? 'block' : 'none';
+        }
+
+        /** Cloudflare v4 JSON: returns result or throws. */
+        async function cfApiResult(path, init = {}, bearerToken) {
+            const token = bearerToken || state.cloudflareConfig?.apiToken;
+            const url = cloudflareApiBase() + path;
+            const headers = new Headers(init.headers || {});
+            if (token && !headers.has('Authorization')) {
+                headers.set('Authorization', 'Bearer ' + token);
+            }
+            if (init.body instanceof FormData) {
+                headers.delete('Content-Type');
+            }
+            const res = await fetch(url, { ...init, headers });
+            const text = await res.text();
+            let json;
+            try {
+                json = text ? JSON.parse(text) : {};
+            } catch {
+                throw new Error('Invalid JSON from Cloudflare: ' + text.slice(0, 200));
+            }
+            if (!json.success) {
+                const msg = (json.errors && json.errors[0] && json.errors[0].message) || json.messages?.[0] || res.statusText;
+                throw new Error(msg || 'Cloudflare API error');
+            }
+            return json.result;
+        }
+
+        let _cfBlake3Cache = null;
+        async function loadCfBlake3() {
+            if (_cfBlake3Cache) return _cfBlake3Cache;
+            const [blake3mod, utils] = await Promise.all([
+                import('https://esm.sh/@noble/hashes@1.7.1/blake3.js'),
+                import('https://esm.sh/@noble/hashes@1.7.1/utils.js'),
+            ]);
+            _cfBlake3Cache = { blake3: blake3mod.blake3, bytesToHex: utils.bytesToHex };
+            return _cfBlake3Cache;
+        }
+
+        function uint8ToBase64(u8) {
+            const CHUNK = 0x8000;
+            let binary = '';
+            for (let i = 0; i < u8.length; i += CHUNK) {
+                binary += String.fromCharCode.apply(null, u8.subarray(i, i + CHUNK));
+            }
+            return btoa(binary);
+        }
+
+        /** Same content hash as Wrangler Pages (blake3 of utf8(base64 + extension), first 32 hex chars). */
+        async function cfPagesContentHash(buffer, relativePath) {
+            const name = relativePath.replace(/\\/g, '/');
+            const dot = name.lastIndexOf('.');
+            const ext = dot >= 0 ? name.slice(dot + 1) : '';
+            const base64 = uint8ToBase64(new Uint8Array(buffer));
+            const { blake3, bytesToHex } = await loadCfBlake3();
+            const input = new TextEncoder().encode(base64 + ext);
+            const h = blake3(input);
+            return bytesToHex(h).slice(0, 32);
+        }
+
+        function guessMimeType(relativePath) {
+            const n = relativePath.toLowerCase();
+            if (n.endsWith('.html')) return 'text/html; charset=utf-8';
+            if (n.endsWith('.css')) return 'text/css';
+            if (n.endsWith('.js')) return 'application/javascript';
+            if (n.endsWith('.json')) return 'application/json';
+            if (n.endsWith('.svg')) return 'image/svg+xml';
+            if (n.endsWith('.webp')) return 'image/webp';
+            if (n.endsWith('.png')) return 'image/png';
+            if (n.endsWith('.jpg') || n.endsWith('.jpeg')) return 'image/jpeg';
+            if (n.endsWith('.gif')) return 'image/gif';
+            if (n.endsWith('.woff2')) return 'font/woff2';
+            return 'application/octet-stream';
         }
 
         /** GET /api/project/assets must return a JSON array of names; coerce anything else to []. */
@@ -627,6 +806,134 @@
             if (v) el.textContent = 'v' + v;
         }
 
+        function setStartupLoaderMessage(msg) {
+            const el = $('startup-loader-msg');
+            if (el) el.textContent = msg;
+        }
+
+        function showStartupLoader(msg) {
+            if (msg) setStartupLoaderMessage(msg);
+            const root = $('startup-loader');
+            root.classList.add('active');
+            root.setAttribute('aria-busy', 'true');
+        }
+
+        function hideStartupLoader() {
+            const root = $('startup-loader');
+            root.classList.remove('active');
+            root.setAttribute('aria-busy', 'false');
+        }
+
+        /** Same rules as Website → Laptop (download) availability. */
+        function canDownloadFromHost() {
+            const p = normalizeDeployProvider(state.deployProvider);
+            if (p === 'cloudflare') {
+                const c = state.cloudflareConfig || {};
+                return !!(c.apiToken && c.accountId && c.projectName);
+            }
+            return !!(state.netlifyConfig?.token && state.netlifyConfig?.siteId);
+        }
+
+        async function syncHttpProjectConfig() {
+            const configRes = await fetch('/api/project/config');
+            const config = await configRes.ok ? await configRes.json() : {};
+            state.deployProvider = normalizeDeployProvider(config.provider);
+            state.netlifyConfig = config.netlify || {};
+            state.cloudflareConfig = config.cloudflare || {};
+
+            const oldConfig = localStorage.getItem('cms-netlify-config');
+            if (oldConfig && !state.netlifyConfig.token) {
+                const parsed = JSON.parse(oldConfig);
+                state.netlifyConfig = {
+                    token: parsed.token || '',
+                    siteId: parsed.siteId || '',
+                };
+                const merged = { ...config, netlify: state.netlifyConfig };
+                await fetch('/api/project/config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(merged),
+                });
+                localStorage.removeItem('cms-netlify-config');
+            }
+
+            $('deploy-provider').value = state.deployProvider;
+            $('netlify-token').value = state.netlifyConfig.token || '';
+            $('netlify-siteId').value = state.netlifyConfig.siteId || '';
+            $('cloudflare-token').value = state.cloudflareConfig.apiToken || '';
+            $('cloudflare-accountId').value = state.cloudflareConfig.accountId || '';
+            $('cloudflare-projectName').value = state.cloudflareConfig.projectName || '';
+            $('project-folder').value = state.httpProjectDir || '(local server)';
+            syncProviderPanels();
+            updateProviderStatus();
+        }
+
+        /**
+         * Loads index.html + assets from the local project folder (after optional host sync).
+         * @param {{ skipOpenedToast?: boolean }} [options]
+         */
+        async function loadHttpProjectContent(options = {}) {
+            const skipOpenedToast = !!options.skipOpenedToast;
+            const idxRes = await fetch('/api/project/index.html');
+            if (!idxRes.ok) {
+                for (const url of state.assetBlobUrls.values()) {
+                    URL.revokeObjectURL(url);
+                }
+                state.assetBlobUrls.clear();
+                state.project.dirHandle = null;
+                state.project.fileHandle = null;
+                state.project.assetsHandle = null;
+                state.project.httpOpen = true;
+                state.project.hasIndexHtml = false;
+                $('file-name').textContent = 'Project (empty)';
+                $('file-name').style.display = 'block';
+                $('empty-state').style.display = 'flex';
+                $('preview-wrapper').style.display = 'none';
+                updateDeployButtons();
+                showToast(
+                    "This folder has no index.html yet—that's normal for a new project. Add a template or pull from Netlify when you're ready.",
+                    'info'
+                );
+                return;
+            }
+
+            const content = await idxRes.text();
+            const assetsRes = await fetch('/api/project/assets');
+            const names = await readAssetNameList(assetsRes);
+
+            for (const url of state.assetBlobUrls.values()) {
+                URL.revokeObjectURL(url);
+            }
+            state.assetBlobUrls.clear();
+
+            state.project.dirHandle = null;
+            state.project.fileHandle = { name: 'index.html' };
+            state.project.assetsHandle = {};
+            state.project.httpOpen = true;
+            state.project.hasIndexHtml = true;
+
+            for (const name of names) {
+                const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
+                if (bRes.ok) {
+                    const blob = await bRes.blob();
+                    state.assetBlobUrls.set(name, URL.createObjectURL(blob));
+                }
+            }
+
+            state.content.original = content;
+
+            $('file-name').textContent = state.httpProjectDir.split(/[/\\]/).filter(Boolean).pop() || 'Project';
+            $('file-name').style.display = 'block';
+            $('empty-state').style.display = 'none';
+            $('preview-wrapper').style.display = 'block';
+
+            renderPreview(content);
+            updateDeployButtons();
+            if (!skipOpenedToast) {
+                showToast('Opened project (local server)', 'success');
+            }
+        }
+
         async function detectBackend() {
             window.__cmsReady = false;
             if (location.protocol === 'file:') {
@@ -644,7 +951,29 @@
                 state.httpProjectDir = data.projectDir || '';
                 syncAppVersionLabel(data);
                 updateLocalServerUI();
-                await openProjectHttp();
+                showStartupLoader('Syncing website from host…');
+                try {
+                    await syncHttpProjectConfig();
+                    if (canDownloadFromHost()) {
+                        setStartupLoaderMessage('Downloading latest from website (Website → Laptop)…');
+                        const pulled = await runDownload();
+                        if (!pulled) {
+                            await loadHttpProjectContent();
+                        }
+                    } else {
+                        setStartupLoaderMessage('Loading local project…');
+                        await loadHttpProjectContent();
+                    }
+                } catch (err) {
+                    showToast('Failed to load project: ' + err.message, 'error');
+                    try {
+                        await loadHttpProjectContent();
+                    } catch (e2) {
+                        console.error(e2);
+                    }
+                } finally {
+                    hideStartupLoader();
+                }
             } catch {
                 state.backend = 'fs';
                 updateLocalServerUI();
@@ -655,87 +984,8 @@
 
         async function openProjectHttp() {
             try {
-                const configRes = await fetch('/api/project/config');
-                const config = await configRes.ok ? await configRes.json() : {};
-                state.netlifyConfig = config.netlify || {};
-
-                const oldConfig = localStorage.getItem('cms-netlify-config');
-                if (oldConfig && !state.netlifyConfig.token) {
-                    const parsed = JSON.parse(oldConfig);
-                    state.netlifyConfig = {
-                        token: parsed.token || '',
-                        siteId: parsed.siteId || '',
-                    };
-                    const merged = { ...config, netlify: state.netlifyConfig };
-                    await fetch('/api/project/config', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(merged),
-                    });
-                    localStorage.removeItem('cms-netlify-config');
-                }
-
-                $('netlify-token').value = state.netlifyConfig.token || '';
-                $('netlify-siteId').value = state.netlifyConfig.siteId || '';
-                $('project-folder').value = state.httpProjectDir || '(local server)';
-                updateNetlifyStatus();
-
-                const idxRes = await fetch('/api/project/index.html');
-                if (!idxRes.ok) {
-                    for (const url of state.assetBlobUrls.values()) {
-                        URL.revokeObjectURL(url);
-                    }
-                    state.assetBlobUrls.clear();
-                    state.project.dirHandle = null;
-                    state.project.fileHandle = null;
-                    state.project.assetsHandle = null;
-                    state.project.httpOpen = true;
-                    state.project.hasIndexHtml = false;
-                    $('file-name').textContent = 'Project (empty)';
-                    $('file-name').style.display = 'block';
-                    $('empty-state').style.display = 'flex';
-                    $('preview-wrapper').style.display = 'none';
-                    updateDeployButtons();
-                    showToast(
-                        "This folder has no index.html yet—that's normal for a new project. Add a template or pull from Netlify when you're ready.",
-                        'info'
-                    );
-                    return;
-                }
-
-                const content = await idxRes.text();
-                const assetsRes = await fetch('/api/project/assets');
-                const names = await readAssetNameList(assetsRes);
-
-                for (const url of state.assetBlobUrls.values()) {
-                    URL.revokeObjectURL(url);
-                }
-                state.assetBlobUrls.clear();
-
-                state.project.dirHandle = null;
-                state.project.fileHandle = { name: 'index.html' };
-                state.project.assetsHandle = {};
-                state.project.httpOpen = true;
-                state.project.hasIndexHtml = true;
-
-                for (const name of names) {
-                    const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
-                    if (bRes.ok) {
-                        const blob = await bRes.blob();
-                        state.assetBlobUrls.set(name, URL.createObjectURL(blob));
-                    }
-                }
-
-                state.content.original = content;
-
-                $('file-name').textContent = state.httpProjectDir.split(/[/\\]/).filter(Boolean).pop() || 'Project';
-                $('file-name').style.display = 'block';
-                $('empty-state').style.display = 'none';
-                $('preview-wrapper').style.display = 'block';
-
-                renderPreview(content);
-                updateDeployButtons();
-                showToast('Opened project (local server)', 'success');
+                await syncHttpProjectConfig();
+                await loadHttpProjectContent();
             } catch (err) {
                 showToast('Failed to open project: ' + err.message, 'error');
             }
@@ -899,7 +1149,9 @@
                 
                 // Load project config from .web-editor.json
                 const config = await loadProjectConfig(dirHandle);
+                state.deployProvider = normalizeDeployProvider(config.provider);
                 state.netlifyConfig = config.netlify || {};
+                state.cloudflareConfig = config.cloudflare || {};
 
                 // Migration: if file config is empty but localStorage has config, migrate it
                 const oldConfig = localStorage.getItem('cms-netlify-config');
@@ -909,14 +1161,23 @@
                         token: parsed.token || '',
                         siteId: parsed.siteId || '',
                     };
-                    await saveProjectConfig(dirHandle, { netlify: state.netlifyConfig });
+                    await saveProjectConfig(dirHandle, {
+                        provider: state.deployProvider,
+                        netlify: state.netlifyConfig,
+                        cloudflare: state.cloudflareConfig,
+                    });
                     localStorage.removeItem('cms-netlify-config');
                 }
 
+                $('deploy-provider').value = state.deployProvider;
                 $('netlify-token').value = state.netlifyConfig.token || '';
                 $('netlify-siteId').value = state.netlifyConfig.siteId || '';
+                $('cloudflare-token').value = state.cloudflareConfig.apiToken || '';
+                $('cloudflare-accountId').value = state.cloudflareConfig.accountId || '';
+                $('cloudflare-projectName').value = state.cloudflareConfig.projectName || '';
                 $('project-folder').value = dirHandle.name;
-                updateNetlifyStatus();
+                syncProviderPanels();
+                updateProviderStatus();
                 
                 // Check for index.html
                 let fileHandle;
@@ -1524,6 +1785,80 @@
         // ============================================
         // Image Replacement
         // ============================================
+        function collectImageAssetFilenames(img) {
+            const names = new Set();
+            const main = img.dataset.assetFilename;
+            if (main) names.add(main);
+            const src = img.getAttribute('src') || '';
+            if (src.startsWith('./assets/')) {
+                names.add(src.slice('./assets/'.length));
+            } else if (src.startsWith('blob:')) {
+                for (const [fn, blobUrl] of state.assetBlobUrls) {
+                    if (blobUrl === src) {
+                        names.add(fn);
+                        break;
+                    }
+                }
+            }
+            const srcset = img.getAttribute('srcset');
+            if (srcset) {
+                for (const part of srcset.split(',')) {
+                    const url = part.trim().split(/\s+/)[0];
+                    if (!url) continue;
+                    if (url.startsWith('./assets/')) {
+                        names.add(url.slice('./assets/'.length));
+                    } else if (url.startsWith('blob:')) {
+                        for (const [fn, blobUrl] of state.assetBlobUrls) {
+                            if (blobUrl === url) {
+                                names.add(fn);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            return [...names];
+        }
+
+        function otherImagesUseAsset(doc, excludeImg, filename) {
+            if (!doc || !filename) return false;
+            const blobUrl = state.assetBlobUrls.get(filename);
+            for (const el of doc.querySelectorAll('[data-editable-image]')) {
+                if (el === excludeImg) continue;
+                if (el.dataset.assetFilename === filename) return true;
+                const src = el.getAttribute('src') || '';
+                if (blobUrl && src === blobUrl) return true;
+                if (src === `./assets/${filename}`) return true;
+                const srcset = el.getAttribute('srcset') || '';
+                if (blobUrl && srcset.includes(blobUrl)) return true;
+                if (srcset.includes(`./assets/${filename}`)) return true;
+            }
+            return false;
+        }
+
+        async function deleteReplacedImageAssets(doc, img, newNames, oldNames) {
+            const newSet = new Set(newNames);
+            for (const name of oldNames) {
+                if (newSet.has(name) || otherImagesUseAsset(doc, img, name)) continue;
+                if (state.backend === 'http') {
+                    try {
+                        await fetch('/api/project/assets/' + encodeURIComponent(name), { method: 'DELETE' });
+                    } catch (_) {
+                        /* ignore */
+                    }
+                } else if (state.project.assetsHandle) {
+                    try {
+                        await state.project.assetsHandle.removeEntry(name);
+                    } catch (_) {
+                        /* ignore */
+                    }
+                }
+                const u = state.assetBlobUrls.get(name);
+                if (u) URL.revokeObjectURL(u);
+                state.assetBlobUrls.delete(name);
+            }
+        }
+
         async function generateResponsiveWebPVariants(file) {
             const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
             const stem = `${name}-${Date.now()}`;
@@ -1555,7 +1890,6 @@
                 }
                 blobs.set(`${stem}-${w}w.webp`, blob);
             }
-            blobs.set(`${stem}.webp`, blobs.get(`${stem}-800w.webp`));
             return { stem, blobs };
         }
 
@@ -1574,8 +1908,11 @@
             }
 
             try {
+                const previewDoc = $('preview-frame').contentDocument;
+                const previousAssetNames = collectImageAssetFilenames(img);
                 if (state.backend === 'http') {
                     const { stem, blobs } = await generateResponsiveWebPVariants(file);
+                    const newNames = [...blobs.keys()];
                     for (const [fname, blob] of blobs) {
                         const put = await fetch('/api/project/assets/' + encodeURIComponent(fname), {
                             method: 'PUT',
@@ -1584,13 +1921,14 @@
                         if (!put.ok) throw new Error('Upload failed: ' + fname);
                         state.assetBlobUrls.set(fname, URL.createObjectURL(blob));
                     }
-                    const mainFile = `${stem}.webp`;
+                    const mainFile = `${stem}-800w.webp`;
                     img.src = state.assetBlobUrls.get(mainFile);
                     img.dataset.assetFilename = mainFile;
                     const srcsetParts = [320, 576, 800].map(
                         w => `${state.assetBlobUrls.get(`${stem}-${w}w.webp`)} ${w}w`
                     );
                     img.setAttribute('srcset', srcsetParts.join(', '));
+                    await deleteReplacedImageAssets(previewDoc, img, newNames, previousAssetNames);
                 } else {
                     const ext = file.name.split('.').pop().toLowerCase();
                     const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -1607,6 +1945,7 @@
                     img.src = newBlobUrl;
                     img.dataset.assetFilename = newFilename;
                     img.removeAttribute('srcset');
+                    await deleteReplacedImageAssets(previewDoc, img, [newFilename], previousAssetNames);
                 }
 
                 showToast('Image replaced', 'success');
@@ -1619,12 +1958,27 @@
         });
 
         // ============================================
-        // Netlify Configuration
+        // Deploy provider configuration
         // ============================================
-        async function saveNetlifyConfig() {
+        function readProviderStateFromForm() {
+            state.deployProvider = normalizeDeployProvider($('deploy-provider')?.value);
             state.netlifyConfig = {
                 token: $('netlify-token').value,
                 siteId: $('netlify-siteId').value,
+            };
+            state.cloudflareConfig = {
+                apiToken: $('cloudflare-token').value,
+                accountId: $('cloudflare-accountId').value,
+                projectName: $('cloudflare-projectName').value.trim(),
+            };
+        }
+
+        async function saveProviderConfig() {
+            readProviderStateFromForm();
+            const payload = {
+                provider: state.deployProvider,
+                netlify: state.netlifyConfig,
+                cloudflare: state.cloudflareConfig,
             };
             if (state.backend === 'http') {
                 let cur = {};
@@ -1632,16 +1986,16 @@
                     const r = await fetch('/api/project/config');
                     if (r.ok) cur = await r.json();
                 } catch { /* ignore */ }
-                cur.netlify = state.netlifyConfig;
+                Object.assign(cur, payload);
                 await fetch('/api/project/config', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(cur),
                 });
             } else if (state.project.dirHandle) {
-                await saveProjectConfig(state.project.dirHandle, { netlify: state.netlifyConfig });
+                await saveProjectConfig(state.project.dirHandle, payload);
             }
-            updateNetlifyStatus();
+            updateProviderStatus();
         }
 
         async function selectProjectFolder() {
@@ -1684,41 +2038,304 @@
             }
         }
 
-        function updateNetlifyStatus() {
-            const configured = state.netlifyConfig && state.netlifyConfig.token;
-            $('netlify-status').classList.toggle('connected', configured);
-            if (configured) {
-                const siteInfo = state.netlifyConfig.siteId ? `Site: ${state.netlifyConfig.siteId}` : 'New site on deploy';
-                $('netlify-status-text').textContent = `Netlify: ${siteInfo}`;
+        function updateProviderStatus() {
+            const p = normalizeDeployProvider(state.deployProvider);
+            let configured = false;
+            let detail = 'Not configured';
+            if (p === 'netlify') {
+                configured = !!(state.netlifyConfig && state.netlifyConfig.token);
+                if (configured) {
+                    detail = state.netlifyConfig.siteId ? `Site: ${state.netlifyConfig.siteId}` : 'New site on deploy';
+                }
+                $('provider-status-text').textContent = `Netlify: ${detail}`;
             } else {
-                $('netlify-status-text').textContent = 'Netlify: Not configured';
+                const c = state.cloudflareConfig || {};
+                configured = !!(c.apiToken && c.accountId && c.projectName);
+                if (configured) {
+                    detail = `Project: ${c.projectName}`;
+                }
+                $('provider-status-text').textContent = `Cloudflare: ${detail}`;
             }
+            $('provider-status').classList.toggle('connected', configured);
             updateDeployButtons();
+        }
+
+        // ============================================
+        // Deploy: shared file collection
+        // ============================================
+        /**
+         * @returns {{ indexHtml: string, headersContent: string, assetBuffers: Map<string, ArrayBuffer> }}
+         */
+        async function collectDeployFiles() {
+            const indexHtml = getEditedContent();
+            const headersContent = '/*\n  Access-Control-Allow-Origin: *\n';
+            const assetBuffers = new Map();
+            const { fileHandle, dirHandle, assetsHandle } = state.project;
+            if (state.backend === 'http') {
+                const listRes = await fetch('/api/project/assets');
+                const names = await readAssetNameList(listRes);
+                for (const name of names) {
+                    const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
+                    if (!bRes.ok) continue;
+                    const buf = await bRes.arrayBuffer();
+                    assetBuffers.set(name, buf);
+                }
+            } else {
+                for await (const entry of assetsHandle.values()) {
+                    if (entry.kind === 'file') {
+                        const file = await entry.getFile();
+                        assetBuffers.set(entry.name, await file.arrayBuffer());
+                    }
+                }
+            }
+            return { indexHtml, headersContent, assetBuffers };
+        }
+
+        async function writeDownloadedFilesToProject(html, assetBlobs, remoteAssetNames, dirHandleFs) {
+            if (state.backend === 'http') {
+                const putHtml = await fetch('/api/project/index.html', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                    body: html,
+                });
+                if (!putHtml.ok) throw new Error('Failed to save index.html');
+
+                const listRes = await fetch('/api/project/assets');
+                const localNames = await readAssetNameList(listRes);
+                for (const name of localNames) {
+                    if (!remoteAssetNames.has(name)) {
+                        try {
+                            await fetch('/api/project/assets/' + encodeURIComponent(name), { method: 'DELETE' });
+                        } catch (err) {
+                            console.warn(`Failed to delete stale asset: ${name}`, err);
+                        }
+                    }
+                }
+                for (const [localPath, blob] of assetBlobs) {
+                    const filename = localPath.replace('./assets/', '');
+                    const put = await fetch('/api/project/assets/' + encodeURIComponent(filename), {
+                        method: 'PUT',
+                        body: blob,
+                    });
+                    if (!put.ok) throw new Error('Failed to save asset: ' + filename);
+                }
+            } else {
+                const dirHandle = dirHandleFs || state.project.dirHandle;
+                const htmlHandle = await dirHandle.getFileHandle('index.html', { create: true });
+                const htmlWritable = await htmlHandle.createWritable();
+                await htmlWritable.write(html);
+                await htmlWritable.close();
+
+                const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
+
+                for await (const entry of assetsHandle.values()) {
+                    if (entry.kind === 'file' && !remoteAssetNames.has(entry.name)) {
+                        try {
+                            await assetsHandle.removeEntry(entry.name);
+                        } catch (err) {
+                            console.warn(`Failed to delete stale asset: ${entry.name}`, err);
+                        }
+                    }
+                }
+
+                for (const [localPath, blob] of assetBlobs) {
+                    const filename = localPath.replace('./assets/', '');
+                    const fileHandle = await assetsHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                }
+            }
+        }
+
+        // ============================================
+        // Cloudflare Pages deployment (Wrangler-compatible hash + upload flow)
+        // ============================================
+        async function deployToCloudflarePages() {
+            const c = state.cloudflareConfig || {};
+            const { fileHandle, dirHandle } = state.project;
+            const canDeploy =
+                c.apiToken &&
+                c.accountId &&
+                c.projectName &&
+                (state.backend === 'http'
+                    ? state.project.httpOpen && state.project.hasIndexHtml
+                    : !!fileHandle && !!dirHandle);
+            if (!canDeploy) return;
+
+            const accountId = c.accountId.trim();
+            const projectName = c.projectName.trim();
+            const mergeKey = 'cf-deploy';
+
+            try {
+                showToast('Starting Cloudflare Pages deployment...', 'info', { mergeKey });
+                $('btn-deploy-netlify').disabled = true;
+
+                showToast('Preparing project...', 'info', { mergeKey });
+                const projCheck = await fetch(
+                    `${cloudflareApiBase()}/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}`,
+                    { headers: { Authorization: `Bearer ${c.apiToken}` } }
+                );
+                const projJson = await projCheck.json();
+                if (!projJson.success) {
+                    const code = projJson.errors && projJson.errors[0] && projJson.errors[0].code;
+                    if (code === 8000007) {
+                        await cfApiResult(`/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: projectName, production_branch: 'main' }),
+                        });
+                    } else {
+                        throw new Error((projJson.errors && projJson.errors[0] && projJson.errors[0].message) || 'Cloudflare project check failed');
+                    }
+                }
+
+                const { jwt } = await cfApiResult(
+                    `/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}/upload-token`,
+                    { method: 'GET' }
+                );
+
+                const { indexHtml, headersContent, assetBuffers } = await collectDeployFiles();
+                showToast('Hashing files...', 'info', { mergeKey });
+
+                /** @type {Map<string, { relativePath: string, buffer: ArrayBuffer, hash: string, contentType: string }>} */
+                const byPath = new Map();
+                const idxBuf = await new Blob([indexHtml]).arrayBuffer();
+                const idxHash = await cfPagesContentHash(idxBuf, 'index.html');
+                byPath.set('index.html', {
+                    relativePath: 'index.html',
+                    buffer: idxBuf,
+                    hash: idxHash,
+                    contentType: 'text/html; charset=utf-8',
+                });
+                for (const [name, buf] of assetBuffers) {
+                    const rel = `assets/${name}`;
+                    const h = await cfPagesContentHash(buf, rel);
+                    byPath.set(rel, {
+                        relativePath: rel,
+                        buffer: buf,
+                        hash: h,
+                        contentType: guessMimeType(rel),
+                    });
+                }
+
+                const allHashes = [...byPath.values()].map((x) => x.hash);
+                const missing = await cfApiResult(
+                    '/client/v4/pages/assets/check-missing',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hashes: allHashes }),
+                    },
+                    jwt
+                );
+
+                const missingSet = new Set(missing || []);
+                const toUpload = [...byPath.values()].filter((f) => missingSet.has(f.hash));
+                toUpload.sort((a, b) => b.buffer.byteLength - a.buffer.byteLength);
+
+                let up = 0;
+                for (const f of toUpload) {
+                    up++;
+                    if (toUpload.length > 1) {
+                        showToast(`Uploading assets... (${up}/${toUpload.length})`, 'info', { mergeKey });
+                    }
+                    const b64 = uint8ToBase64(new Uint8Array(f.buffer));
+                    const payload = [
+                        {
+                            key: f.hash,
+                            value: b64,
+                            metadata: { contentType: f.contentType },
+                            base64: true,
+                        },
+                    ];
+                    await cfApiResult(
+                        '/client/v4/pages/assets/upload',
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                        },
+                        jwt
+                    );
+                }
+
+                await cfApiResult(
+                    '/client/v4/pages/assets/upsert-hashes',
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ hashes: allHashes }),
+                    },
+                    jwt
+                );
+
+                const manifest = {};
+                for (const f of byPath.values()) {
+                    manifest['/' + f.relativePath] = f.hash;
+                }
+
+                const form = new FormData();
+                form.append('manifest', JSON.stringify(manifest));
+                form.append('branch', 'main');
+                form.append('commit_hash', Array.from(crypto.getRandomValues(new Uint8Array(20))).map((b) => b.toString(16).padStart(2, '0')).join(''));
+                form.append('commit_message', 'ProjectWhy deploy');
+                form.append('commit_dirty', 'false');
+                const hdrBlob = new Blob([headersContent], { type: 'text/plain' });
+                form.append('_headers', new File([hdrBlob], '_headers', { type: 'text/plain' }));
+
+                const deployment = await cfApiResult(
+                    `/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}/deployments`,
+                    { method: 'POST', body: form }
+                );
+
+                const siteUrl = deployment.url || deployment.latest_stage?.url || '';
+                dismissMergeToast(mergeKey);
+                showToast('Deployed to Cloudflare Pages!', 'success');
+                if (siteUrl) {
+                    setTimeout(() => {
+                        if (confirm(`Deployment successful!\n\nOpen ${siteUrl}?`)) {
+                            window.open(siteUrl, '_blank');
+                        }
+                    }, 500);
+                }
+            } catch (err) {
+                dismissMergeToast('cf-deploy');
+                showToast('Cloudflare deployment failed: ' + err.message, 'error');
+                console.error(err);
+            } finally {
+                updateDeployButtons();
+            }
         }
 
         // ============================================
         // Netlify Deployment
         // ============================================
-        async function persistNetlifyConfigToProject() {
+        async function persistProviderConfigToProject() {
+            const payload = {
+                provider: state.deployProvider,
+                netlify: state.netlifyConfig,
+                cloudflare: state.cloudflareConfig,
+            };
             if (state.backend === 'http') {
                 let cur = {};
                 try {
                     const r = await fetch('/api/project/config');
                     if (r.ok) cur = await r.json();
                 } catch { /* ignore */ }
-                cur.netlify = state.netlifyConfig;
+                Object.assign(cur, payload);
                 await fetch('/api/project/config', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(cur),
                 });
             } else if (state.project.dirHandle) {
-                await saveProjectConfig(state.project.dirHandle, { netlify: state.netlifyConfig });
+                await saveProjectConfig(state.project.dirHandle, payload);
             }
         }
 
         async function deployToNetlify() {
-            const { fileHandle, dirHandle, assetsHandle } = state.project;
+            const { fileHandle, dirHandle } = state.project;
             const canDeploy =
                 state.netlifyConfig?.token &&
                 (state.backend === 'http'
@@ -1730,7 +2347,7 @@
                 showToast('Starting Netlify deployment...', 'info', { mergeKey: 'netlify-deploy' });
                 $('btn-deploy-netlify').disabled = true;
 
-                const content = getEditedContent();
+                const { indexHtml, headersContent, assetBuffers } = await collectDeployFiles();
                 const token = state.netlifyConfig.token;
                 let siteId = state.netlifyConfig.siteId;
                 let siteUrl = '';
@@ -1758,48 +2375,28 @@
 
                     state.netlifyConfig.siteId = siteId;
                     $('netlify-siteId').value = siteId;
-                    await persistNetlifyConfigToProject();
-                    updateNetlifyStatus();
+                    await persistProviderConfigToProject();
+                    updateProviderStatus();
 
                     showToast(`Created new site: ${siteUrl}`, 'info', { mergeKey: 'netlify-deploy' });
                 }
 
-                // Step 2: Build file manifest with hashes
+                showToast('Scanning assets...', 'info', { mergeKey: 'netlify-deploy' });
                 const files = {};
                 const fileContents = new Map();
 
-                const htmlHash = await sha1(content);
+                const htmlHash = await sha1(indexHtml);
                 files['/index.html'] = htmlHash;
-                fileContents.set('/index.html', content);
+                fileContents.set('/index.html', indexHtml);
 
-                const headersContent = '/*\n  Access-Control-Allow-Origin: *\n';
                 const headersHash = await sha1(headersContent);
                 files['/_headers'] = headersHash;
                 fileContents.set('/_headers', headersContent);
 
-                showToast('Scanning assets...', 'info', { mergeKey: 'netlify-deploy' });
-                if (state.backend === 'http') {
-                    const listRes = await fetch('/api/project/assets');
-                    const names = await readAssetNameList(listRes);
-                    for (const name of names) {
-                        const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
-                        if (!bRes.ok) continue;
-                        const file = await bRes.blob();
-                        const buffer = await file.arrayBuffer();
-                        const hash = await sha1Binary(buffer);
-                        files[`/assets/${name}`] = hash;
-                        fileContents.set(`/assets/${name}`, file);
-                    }
-                } else {
-                    for await (const entry of assetsHandle.values()) {
-                        if (entry.kind === 'file') {
-                            const file = await entry.getFile();
-                            const buffer = await file.arrayBuffer();
-                            const hash = await sha1Binary(buffer);
-                            files[`/assets/${entry.name}`] = hash;
-                            fileContents.set(`/assets/${entry.name}`, file);
-                        }
-                    }
+                for (const [name, buf] of assetBuffers) {
+                    const hash = await sha1Binary(buf);
+                    files[`/assets/${name}`] = hash;
+                    fileContents.set(`/assets/${name}`, new Blob([buf]));
                 }
 
                 const deployResponse = await fetch(`${nBase}/api/v1/sites/${siteId}/deploys`, {
@@ -1823,30 +2420,41 @@
                 }
 
                 const required = deployData.required || [];
+                const requiredSet = new Set(required);
+                const uploadedDigests = new Set();
                 let uploadedCount = 0;
+                const uniqueRequiredInManifest = new Set(
+                    Object.values(files).filter(h => requiredSet.has(h))
+                ).size;
 
                 for (const [path, hash] of Object.entries(files)) {
-                    if (required.includes(hash)) {
-                        const uploadResponse = await fetch(
-                            `${nBase}/api/v1/deploys/${deployId}/files${path}`,
-                            {
-                                method: 'PUT',
-                                headers: {
-                                    'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/octet-stream',
-                                },
-                                body: fileContents.get(path),
-                            }
+                    if (!requiredSet.has(hash) || uploadedDigests.has(hash)) {
+                        continue;
+                    }
+                    const uploadResponse = await fetch(
+                        `${nBase}/api/v1/deploys/${deployId}/files${path}`,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/octet-stream',
+                            },
+                            body: fileContents.get(path),
+                        }
+                    );
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`Failed to upload ${path}`);
+                    }
+
+                    uploadedDigests.add(hash);
+                    uploadedCount++;
+                    if (uniqueRequiredInManifest > 1) {
+                        showToast(
+                            `Uploading... (${uploadedCount}/${uniqueRequiredInManifest})`,
+                            'info',
+                            { mergeKey: 'netlify-deploy' }
                         );
-
-                        if (!uploadResponse.ok) {
-                            throw new Error(`Failed to upload ${path}`);
-                        }
-
-                        uploadedCount++;
-                        if (required.length > 1) {
-                            showToast(`Uploading... (${uploadedCount}/${required.length})`, 'info', { mergeKey: 'netlify-deploy' });
-                        }
                     }
                 }
 
@@ -1900,7 +2508,7 @@
         async function downloadFromNetlify() {
             if (!state.netlifyConfig?.token || !state.netlifyConfig?.siteId) {
                 showToast('Please configure Netlify with a Site ID first', 'error');
-                return;
+                return false;
             }
 
             const token = state.netlifyConfig.token;
@@ -1992,69 +2600,17 @@
 
                 showToast('Syncing files...', 'info', { mergeKey: 'netlify-pull' });
 
-                if (state.backend === 'http') {
-                    const putHtml = await fetch('/api/project/index.html', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-                        body: html,
-                    });
-                    if (!putHtml.ok) throw new Error('Failed to save index.html');
-
-                    const listRes = await fetch('/api/project/assets');
-                    const localNames = await readAssetNameList(listRes);
-                    for (const name of localNames) {
-                        if (!remoteAssetNames.has(name)) {
-                            try {
-                                await fetch('/api/project/assets/' + encodeURIComponent(name), { method: 'DELETE' });
-                            } catch (err) {
-                                console.warn(`Failed to delete stale asset: ${name}`, err);
-                            }
-                        }
-                    }
-                    for (const [localPath, blob] of assetBlobs) {
-                        const filename = localPath.replace('./assets/', '');
-                        const put = await fetch('/api/project/assets/' + encodeURIComponent(filename), {
-                            method: 'PUT',
-                            body: blob,
-                        });
-                        if (!put.ok) throw new Error('Failed to save asset: ' + filename);
-                    }
-                } else {
-                    const htmlHandle = await dirHandle.getFileHandle('index.html', { create: true });
-                    const htmlWritable = await htmlHandle.createWritable();
-                    await htmlWritable.write(html);
-                    await htmlWritable.close();
-
-                    const assetsHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
-
-                    for await (const entry of assetsHandle.values()) {
-                        if (entry.kind === 'file' && !remoteAssetNames.has(entry.name)) {
-                            try {
-                                await assetsHandle.removeEntry(entry.name);
-                            } catch (err) {
-                                console.warn(`Failed to delete stale asset: ${entry.name}`, err);
-                            }
-                        }
-                    }
-
-                    for (const [localPath, blob] of assetBlobs) {
-                        const filename = localPath.replace('./assets/', '');
-                        const fileHandle = await assetsHandle.getFileHandle(filename, { create: true });
-                        const writable = await fileHandle.createWritable();
-                        await writable.write(blob);
-                        await writable.close();
-                    }
-                }
+                await writeDownloadedFilesToProject(html, assetBlobs, remoteAssetNames, dirHandle);
 
                 dismissMergeToast('netlify-pull');
                 showToast('Sync complete! Opening project...', 'success');
 
                 if (state.backend === 'http') {
-                    await openProjectHttp();
+                    await loadHttpProjectContent({ skipOpenedToast: true });
                 } else {
                     await openProject(dirHandle);
                 }
-
+                return true;
             } catch (err) {
                 if (err.name !== 'AbortError') {
                     dismissMergeToast('netlify-pull');
@@ -2065,9 +2621,135 @@
                     showToast('Download failed: ' + msg, 'error');
                     console.error('Download from Netlify error:', err);
                 }
+                return false;
             } finally {
                 updateDeployButtons();
             }
+        }
+
+        /** Discover ./assets/... references in HTML (same convention as editor). */
+        function parseAssetRefsFromHtml(html) {
+            const names = new Set();
+            const re = /\.\/assets\/([^"'\s)]+)/g;
+            let m;
+            while ((m = re.exec(html)) !== null) {
+                names.add(m[1]);
+            }
+            return names;
+        }
+
+        // ============================================
+        // Download from Cloudflare Pages
+        // ============================================
+        async function downloadFromCloudflarePages() {
+            const c = state.cloudflareConfig || {};
+            if (!c.apiToken || !c.accountId || !c.projectName) {
+                showToast('Configure Cloudflare API token, account ID, and project name', 'error');
+                return false;
+            }
+            const accountId = c.accountId.trim();
+            const projectName = c.projectName.trim();
+            const mergeKey = 'cf-pull';
+
+            try {
+                $('btn-download-netlify').disabled = true;
+
+                let dirHandle = null;
+                if (state.backend !== 'http') {
+                    dirHandle = await idb.load();
+                    if (!dirHandle) {
+                        showToast('Select a folder to save the project...', 'info', { mergeKey });
+                        dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                        await idb.save(dirHandle);
+                        $('project-folder').value = dirHandle.name;
+                    } else {
+                        const permission = await dirHandle.requestPermission({ mode: 'readwrite' });
+                        if (permission !== 'granted') {
+                            throw new Error('Permission denied for project folder');
+                        }
+                    }
+                }
+
+                showToast('Fetching deployments...', 'info', { mergeKey });
+                const rawList = await cfApiResult(
+                    `/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}/deployments?per_page=25`
+                );
+                const arr = Array.isArray(rawList) ? rawList : [];
+                const latest = arr
+                    .filter((d) => d && d.url)
+                    .sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0))[0];
+                if (!latest || !latest.url) {
+                    throw new Error('No deployment URL found. Deploy at least once from this project.');
+                }
+                const origin = latest.url.replace(/\/$/, '');
+
+                showToast('Downloading index.html...', 'info', { mergeKey });
+                const htmlResponse = await fetch(`${origin}/index.html`);
+                if (!htmlResponse.ok) {
+                    throw new Error(`Failed to download index.html: ${htmlResponse.status}`);
+                }
+                const html = await htmlResponse.text();
+
+                const remoteNames = parseAssetRefsFromHtml(html);
+                const remoteAssetNames = new Set(remoteNames);
+
+                const assetBlobs = new Map();
+                let i = 0;
+                const namesArr = [...remoteNames];
+                for (const name of namesArr) {
+                    i++;
+                    showToast(`Downloading assets... (${i}/${namesArr.length})`, 'info', { mergeKey });
+                    try {
+                        const response = await fetch(`${origin}/assets/${encodeURIComponent(name)}`);
+                        if (response.ok) {
+                            assetBlobs.set('./assets/' + name, await response.blob());
+                        }
+                    } catch (err) {
+                        console.warn('Failed to download asset:', name, err);
+                    }
+                }
+
+                showToast('Syncing files...', 'info', { mergeKey });
+                await writeDownloadedFilesToProject(html, assetBlobs, remoteAssetNames, dirHandle);
+
+                dismissMergeToast(mergeKey);
+                showToast('Sync complete! Opening project...', 'success');
+
+                if (state.backend === 'http') {
+                    await loadHttpProjectContent({ skipOpenedToast: true });
+                } else {
+                    await openProject(dirHandle);
+                }
+                return true;
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    dismissMergeToast(mergeKey);
+                    let msg = err.message;
+                    if (msg === 'Failed to fetch' || (err instanceof TypeError && msg.includes('fetch'))) {
+                        msg += ' — use the local ProjectWhy server (not file://) if the browser blocks fetches to your Pages URL';
+                    }
+                    showToast('Download failed: ' + msg, 'error');
+                    console.error('Download from Cloudflare error:', err);
+                }
+                return false;
+            } finally {
+                updateDeployButtons();
+            }
+        }
+
+        function runDeploy() {
+            if (normalizeDeployProvider(state.deployProvider) === 'cloudflare') {
+                deployToCloudflarePages();
+            } else {
+                deployToNetlify();
+            }
+        }
+
+        async function runDownload() {
+            if (normalizeDeployProvider(state.deployProvider) === 'cloudflare') {
+                return downloadFromCloudflarePages();
+            }
+            return downloadFromNetlify();
         }
 
         // ============================================
@@ -2081,10 +2763,20 @@
                 const { fileHandle, dirHandle } = state.project;
                 hasProject = !!fileHandle && !!dirHandle;
             }
-            const netlifyReady = hasProject && state.netlifyConfig?.token;
-            const canDownload = state.netlifyConfig?.token && state.netlifyConfig?.siteId;
+            const p = normalizeDeployProvider(state.deployProvider);
+            let deployReady = false;
+            let canDownload = false;
+            if (p === 'cloudflare') {
+                const c = state.cloudflareConfig || {};
+                const ok = !!(c.apiToken && c.accountId && c.projectName);
+                deployReady = hasProject && ok;
+                canDownload = ok;
+            } else {
+                deployReady = hasProject && state.netlifyConfig?.token;
+                canDownload = state.netlifyConfig?.token && state.netlifyConfig?.siteId;
+            }
 
-            $('btn-deploy-netlify').disabled = !netlifyReady;
+            $('btn-deploy-netlify').disabled = !deployReady;
             $('btn-download-netlify').disabled = !canDownload;
         }
 
@@ -2096,13 +2788,18 @@
         $('settings-close').addEventListener('click', () => closeModal('settings-modal'));
         $('settings-cancel').addEventListener('click', () => closeModal('settings-modal'));
         $('settings-save').addEventListener('click', async () => {
-            await saveNetlifyConfig();
+            await saveProviderConfig();
             closeModal('settings-modal');
             showToast('Configuration saved', 'success');
         });
+        $('deploy-provider').addEventListener('change', () => {
+            state.deployProvider = normalizeDeployProvider($('deploy-provider').value);
+            syncProviderPanels();
+            updateDeployButtons();
+        });
         $('btn-select-folder').addEventListener('click', selectProjectFolder);
-        $('btn-deploy-netlify').addEventListener('click', deployToNetlify);
-        $('btn-download-netlify').addEventListener('click', downloadFromNetlify);
+        $('btn-deploy-netlify').addEventListener('click', runDeploy);
+        $('btn-download-netlify').addEventListener('click', runDownload);
         $('btn-stop-server').addEventListener('click', async () => {
             try {
                 await fetch('/api/shutdown', { method: 'POST' });
@@ -2166,7 +2863,7 @@
         // Initialize
         // ============================================
         syncAppVersionLabel();
-        updateNetlifyStatus();
+        updateProviderStatus();
         detectBackend();
 
         // ============================================
@@ -2187,11 +2884,18 @@
         window.saveProjectConfig = saveProjectConfig;
         window.openProject = openProject;
         window.openProjectHttp = openProjectHttp;
+        window.syncHttpProjectConfig = syncHttpProjectConfig;
+        window.loadHttpProjectContent = loadHttpProjectContent;
         window.detectBackend = detectBackend;
         window.downloadFromNetlify = downloadFromNetlify;
+        window.downloadFromCloudflarePages = downloadFromCloudflarePages;
+        window.deployToCloudflarePages = deployToCloudflarePages;
         window.netlifyApiBase = netlifyApiBase;
+        window.cloudflareApiBase = cloudflareApiBase;
         window.updateLocalServerUI = updateLocalServerUI;
-        window.updateNetlifyStatus = updateNetlifyStatus;
+        window.updateProviderStatus = updateProviderStatus;
+        window.syncProviderPanels = syncProviderPanels;
+        window.updateDeployButtons = updateDeployButtons;
     </script>
 </body>
 </html>

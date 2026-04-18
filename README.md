@@ -8,7 +8,7 @@ Because deploying a single page, static website for a bakery or flower shop, doe
 
 ## Desktop host (Windows 11 / single `.exe`)
 
-For locked-down PCs without Python or ImageMagick, use the Go wrapper: it serves the CMS UI from [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) (embedded in the binary) on localhost, reads and writes the project on disk, proxies Netlify's API (no CORS issues in the browser), and by default uses a console window plus an optional **Stop local server** action for shutdown. You can build without a console on Windows (see below).
+For locked-down PCs without Python or ImageMagick, use the Go wrapper: it serves the CMS UI from [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) (embedded in the binary) on localhost, reads and writes the project on disk, proxies **Netlify** and **Cloudflare** APIs (no CORS issues in the browser), and by default uses a console window plus an optional **Stop local server** action for shutdown. You can build without a console on Windows (see below).
 
 **Prerequisites:** [Go](https://go.dev/dl/) on your build machine (users only need the built `.exe`).
 
@@ -27,16 +27,21 @@ Flags and environment:
 
 **Versioning:** the semver lives in [internal/version/version.go](internal/version/version.go) (shown in the editor status bar). `bake-build` passes `-X main.version=…` and writes `dist/projectwhy_<version>` on Unix or `dist/projectwhy_<version>.exe` on Windows unless you set **`-o`**. Plain `go build` uses that same default from source; override with `-ldflags "-X main.version=…"`.
 
-**Netlify token and site ID**
+**Netlify token and site ID** / **Cloudflare Pages (optional)**
 
-Only [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) is embedded by a plain `go build`. To **bake** `PROJECTWHY_NETLIFY_TOKEN` and `PROJECTWHY_NETLIFY_SITE_ID` from the repo's `.env` into the binary automatically, use the bake helper (it generates a short-lived `z_baked_env.gen.go`, runs `go build`, then deletes it):
+Only [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html) is embedded by a plain `go build`. To **bake** deploy defaults from the repo's `.env` into the binary automatically, use the bake helper (it generates a short-lived `z_baked_env.gen.go`, runs `go build`, then deletes it):
+
+- **Netlify:** `PROJECTWHY_NETLIFY_TOKEN`, `PROJECTWHY_NETLIFY_SITE_ID`
+- **Cloudflare Pages:** `PROJECTWHY_CF_API_TOKEN`, `PROJECTWHY_CF_ACCOUNT_ID`, `PROJECTWHY_CF_PROJECT_NAME` (API token needs *Account · Cloudflare Pages · Edit*; use a **Direct Upload** Pages project name)
+
+Run:
 
 ```bash
 go run ./cmd/bake-build
 ```
 
 - **`-o`** — output path (default: `dist/projectwhy_<version>` / `dist/projectwhy_<version>.exe` on Windows).
-- **`-env`** — path to `.env` (default: `.env` at the module root). If the file is missing or has no Netlify keys, the build still succeeds; nothing is baked.
+- **`-env`** — path to `.env` (default: `.env` at the module root). If the file is missing or has no deploy keys, the build still succeeds; nothing is baked.
 - **`-ldflags`** — extra linker flags, appended after `-s -w` and `-X main.version=…`.
 - **`-keep`** — keep `cmd/projectwhy/z_baked_env.gen.go` for debugging (normally removed; the file is gitignored).
 - **`-goos` / `-goarch`** — target platform for the **built** `projectwhy` binary (default: host). Use these for cross-compilation. Do **not** set `GOOS`/`GOARCH` in the shell when running `go run ./cmd/bake-build`: that compiles `bake-build` itself for the target OS and fails with `exec format error` on Linux/macOS.

@@ -3,7 +3,7 @@ import { EditorPage, SettingsModal } from '../page-objects';
 import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../helpers';
 
 /**
- * Netlify Download & Sync Tests
+ * Deploy download & sync tests (Netlify + Cloudflare)
  *
  * Tests the download from Netlify functionality:
  * - Download button state based on configuration
@@ -11,7 +11,7 @@ import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../help
  * - Sync behavior (delete stale files)
  * - IndexedDB storage for folder handles
  */
-test.describe('Netlify Download & Sync', () => {
+test.describe('Deploy download & sync', () => {
   let editor: EditorPage;
   let settings: SettingsModal;
 
@@ -145,6 +145,22 @@ test.describe('Netlify Download & Sync', () => {
     });
 
     expect(savedConfig.folderName).toBe('selected-folder');
+  });
+
+  test('download button enabled for Cloudflare when all fields set', async () => {
+    await settings.open();
+    await settings.setDeployProvider('cloudflare');
+    await settings.fillCloudflareSettings('tok', 'accid', 'proj');
+    await settings.save();
+    await expect(editor.btnDownloadNetlify).toBeEnabled();
+  });
+
+  test('download button disabled for Cloudflare without project name', async () => {
+    await settings.open();
+    await settings.setDeployProvider('cloudflare');
+    await settings.fillCloudflareSettings('tok', 'accid', '');
+    await settings.save();
+    await expect(editor.btnDownloadNetlify).toBeDisabled();
   });
 });
 

@@ -26,19 +26,29 @@ type NetlifyDefaults struct {
 	SiteID string
 }
 
+// CloudflareDefaults are optional API token / account / project (from .env, env vars, or -ldflags).
+// Merged into GET /api/project/config when the project file omits them.
+type CloudflareDefaults struct {
+	APIToken    string
+	AccountID   string
+	ProjectName string
+}
+
 type Server struct {
-	root       *project.Root
-	editorHTML []byte
-	appVersion string
-	netlify    NetlifyDefaults
+	root                 *project.Root
+	editorHTML           []byte
+	appVersion           string
+	netlify              NetlifyDefaults
+	cloudflare           CloudflareDefaults
+	defaultDeployProvider string
 
 	srv *http.Server
 
 	shutdownOnce sync.Once
 }
 
-func New(root *project.Root, editorHTML []byte, addr string, netlify NetlifyDefaults, appVersion string) *Server {
-	s := &Server{root: root, editorHTML: editorHTML, appVersion: appVersion, netlify: netlify}
+func New(root *project.Root, editorHTML []byte, addr string, netlify NetlifyDefaults, cloudflare CloudflareDefaults, defaultDeployProvider string, appVersion string) *Server {
+	s := &Server{root: root, editorHTML: editorHTML, appVersion: appVersion, netlify: netlify, cloudflare: cloudflare, defaultDeployProvider: defaultDeployProvider}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleEditor)
 	mux.HandleFunc("GET /editor.html", s.handleEditor)
@@ -53,6 +63,7 @@ func New(root *project.Root, editorHTML []byte, addr string, netlify NetlifyDefa
 	mux.HandleFunc("PUT /api/project/assets/", s.handleAssetPath)
 	mux.HandleFunc("DELETE /api/project/assets/", s.handleAssetPath)
 	mux.HandleFunc("/api/netlify/", s.handleNetlifyProxy)
+	mux.HandleFunc("/api/cloudflare/", s.handleCloudflareProxy)
 
 	s.srv = &http.Server{
 		Addr:              addr,
@@ -134,15 +145,20 @@ func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	out := mergeConfigWithNetlifyDefaults(cfg, s.netlify)
+	out := mergeConfigWithProviderDefaults(cfg, s.netlify, s.cloudflare, s.defaultDeployProvider)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(out)
 }
 
-func mergeConfigWithNetlifyDefaults(cfg map[string]any, def NetlifyDefaults) map[string]any {
-	out := make(map[string]any, len(cfg)+1)
+func mergeConfigWithProviderDefaults(cfg map[string]any, netlifyDef NetlifyDefaults, cfDef CloudflareDefaults, defaultProvider string) map[string]any {
+	out := make(map[string]any, len(cfg)+3)
 	for k, v := range cfg {
 		out[k] = v
+	}
+	if defaultProvider != "" {
+		if p := stringFromAny(out["provider"]); p == "" {
+			out["provider"] = defaultProvider
+		}
 	}
 	var n map[string]any
 	if existing, ok := out["netlify"].(map[string]any); ok && existing != nil {
@@ -152,13 +168,33 @@ func mergeConfigWithNetlifyDefaults(cfg map[string]any, def NetlifyDefaults) map
 	}
 	token := stringFromAny(n["token"])
 	siteID := stringFromAny(n["siteId"])
-	if def.Token != "" && token == "" {
-		n["token"] = def.Token
+	if netlifyDef.Token != "" && token == "" {
+		n["token"] = netlifyDef.Token
 	}
-	if def.SiteID != "" && siteID == "" {
-		n["siteId"] = def.SiteID
+	if netlifyDef.SiteID != "" && siteID == "" {
+		n["siteId"] = netlifyDef.SiteID
 	}
 	out["netlify"] = n
+
+	var cf map[string]any
+	if existing, ok := out["cloudflare"].(map[string]any); ok && existing != nil {
+		cf = cloneAnyMap(existing)
+	} else {
+		cf = map[string]any{}
+	}
+	apiTok := stringFromAny(cf["apiToken"])
+	acct := stringFromAny(cf["accountId"])
+	proj := stringFromAny(cf["projectName"])
+	if cfDef.APIToken != "" && apiTok == "" {
+		cf["apiToken"] = cfDef.APIToken
+	}
+	if cfDef.AccountID != "" && acct == "" {
+		cf["accountId"] = cfDef.AccountID
+	}
+	if cfDef.ProjectName != "" && proj == "" {
+		cf["projectName"] = cfDef.ProjectName
+	}
+	out["cloudflare"] = cf
 	return out
 }
 
@@ -203,7 +239,7 @@ func (s *Server) handleGetIndex(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(b)
 }
 
-// handlePutIndex writes index.html to disk (used by Netlify "Website → Laptop" sync; no manual-save UI).
+// handlePutIndex writes index.html to disk (used by "Website → Laptop" sync; no manual-save UI).
 func (s *Server) handlePutIndex(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	b, err := io.ReadAll(io.LimitReader(r.Body, 50<<20))
@@ -308,6 +344,38 @@ func (s *Server) handleNetlifyProxy(w http.ResponseWriter, r *http.Request) {
 		auth := strings.TrimSpace(req.Header.Get("Authorization"))
 		if s.netlify.Token != "" && auth == "" {
 			req.Header.Set("Authorization", "Bearer "+s.netlify.Token)
+		}
+	}
+	proxy.Transport = &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		MaxIdleConns:        10,
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 30 * time.Second,
+	}
+	proxy.ServeHTTP(w, r)
+}
+
+func (s *Server) handleCloudflareProxy(w http.ResponseWriter, r *http.Request) {
+	target, _ := url.Parse("https://api.cloudflare.com")
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Director = func(req *http.Request) {
+		sub := strings.TrimPrefix(req.URL.Path, "/api/cloudflare")
+		if sub == "" {
+			sub = "/"
+		}
+		if !strings.HasPrefix(sub, "/") {
+			sub = "/" + sub
+		}
+		req.URL.Scheme = target.Scheme
+		req.URL.Host = target.Host
+		req.URL.Path = sub
+		req.URL.RawPath = ""
+		req.Host = target.Host
+		allowed := pickHeaders(req.Header, "Authorization", "Content-Type", "Accept", "Accept-Encoding", "User-Agent")
+		req.Header = allowed
+		auth := strings.TrimSpace(req.Header.Get("Authorization"))
+		if s.cloudflare.APIToken != "" && auth == "" {
+			req.Header.Set("Authorization", "Bearer "+s.cloudflare.APIToken)
 		}
 	}
 	proxy.Transport = &http.Transport{

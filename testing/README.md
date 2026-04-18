@@ -37,7 +37,7 @@ testing/
     ├── image-editing.spec.ts  # data-editable-image tests
     ├── toggleable.spec.ts     # data-toggleable tests
     ├── repeatable.spec.ts     # data-repeatable tests
-    ├── netlify-config.spec.ts # Settings & deployment config
+    ├── deploy-config.spec.ts # Settings & deployment config (Netlify + Cloudflare)
     ├── toast-notifications.spec.ts
     ├── keyboard-shortcuts.spec.ts
     └── editor-state.spec.ts   # Overall state management
@@ -52,7 +52,7 @@ testing/
 | Link editing | `data-editable-link` | `link-editing.spec.ts` | Modal-based link editor |
 | Element visibility | `data-toggleable` | `toggleable.spec.ts` | Show/hide elements |
 | Section duplication | `data-repeatable` | `repeatable.spec.ts` | Clone/delete sections |
-| Netlify config | localStorage | `netlify-config.spec.ts` | API token & site settings |
+| Deploy config | localStorage | `deploy-config.spec.ts` | API token & site settings |
 | Toast notifications | UI feedback | `toast-notifications.spec.ts` | Success/error messages |
 | Keyboard shortcuts | Ctrl+S, Enter | `keyboard-shortcuts.spec.ts` | Keyboard interactions |
 | Editor state | Overall | `editor-state.spec.ts` | Load, deploy controls, content extraction |

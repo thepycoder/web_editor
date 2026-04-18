@@ -36,8 +36,9 @@ export class EditorPage {
   readonly toastContainer: Locator;
   
   // Status bar
-  readonly netlifyStatus: Locator;
-  readonly netlifyStatusText: Locator;
+  readonly providerStatus: Locator;
+  readonly providerStatusText: Locator;
+  readonly deployProviderSelect: Locator;
 
   constructor(page: Page) {
     this.page = page;
@@ -60,8 +61,9 @@ export class EditorPage {
     this.toastContainer = page.locator('#toast-container');
     
     // Status bar
-    this.netlifyStatus = page.locator('#netlify-status');
-    this.netlifyStatusText = page.locator('#netlify-status-text');
+    this.providerStatus = page.locator('#provider-status');
+    this.providerStatusText = page.locator('#provider-status-text');
+    this.deployProviderSelect = page.locator('#deploy-provider');
   }
 
   /**
@@ -93,11 +95,27 @@ export class EditorPage {
       win.state.project = win.state.project || {};
       win.state.project.httpOpen = false;
       win.state.project.hasIndexHtml = false;
+      win.state.deployProvider = 'netlify';
+      win.state.netlifyConfig = { token: '', siteId: '' };
+      win.state.cloudflareConfig = { apiToken: '', accountId: '', projectName: '' };
+      const nt = document.getElementById('netlify-token') as HTMLInputElement | null;
+      const ns = document.getElementById('netlify-siteId') as HTMLInputElement | null;
+      const ct = document.getElementById('cloudflare-token') as HTMLInputElement | null;
+      const ca = document.getElementById('cloudflare-accountId') as HTMLInputElement | null;
+      const cp = document.getElementById('cloudflare-projectName') as HTMLInputElement | null;
+      const dp = document.getElementById('deploy-provider') as HTMLSelectElement | null;
+      if (nt) nt.value = '';
+      if (ns) ns.value = '';
+      if (ct) ct.value = '';
+      if (ca) ca.value = '';
+      if (cp) cp.value = '';
+      if (dp) dp.value = 'netlify';
+      if (typeof win.syncProviderPanels === 'function') win.syncProviderPanels();
       if (typeof win.updateLocalServerUI === 'function') {
         win.updateLocalServerUI();
       }
-      if (typeof win.updateNetlifyStatus === 'function') {
-        win.updateNetlifyStatus();
+      if (typeof win.updateProviderStatus === 'function') {
+        win.updateProviderStatus();
       }
     });
   }
@@ -121,7 +139,23 @@ export class EditorPage {
       win.state.content = win.state.content || {};
       win.state.content.original = content;
       win.state.assetBlobUrls = win.state.assetBlobUrls || new Map();
-      win.state.netlifyConfig = win.state.netlifyConfig || {};
+      // Clear deploy credentials so tests are not affected by server-baked .env defaults.
+      win.state.deployProvider = 'netlify';
+      win.state.netlifyConfig = { token: '', siteId: '' };
+      win.state.cloudflareConfig = { apiToken: '', accountId: '', projectName: '' };
+      const nt = document.getElementById('netlify-token') as HTMLInputElement | null;
+      const ns = document.getElementById('netlify-siteId') as HTMLInputElement | null;
+      const ct = document.getElementById('cloudflare-token') as HTMLInputElement | null;
+      const ca = document.getElementById('cloudflare-accountId') as HTMLInputElement | null;
+      const cp = document.getElementById('cloudflare-projectName') as HTMLInputElement | null;
+      const dp = document.getElementById('deploy-provider') as HTMLSelectElement | null;
+      if (nt) nt.value = '';
+      if (ns) ns.value = '';
+      if (ct) ct.value = '';
+      if (ca) ca.value = '';
+      if (cp) cp.value = '';
+      if (dp) dp.value = 'netlify';
+      if (typeof win.syncProviderPanels === 'function') win.syncProviderPanels();
       win.state.ui = win.state.ui || {};
       win.state.ui.viewport = 'desktop';
       win.state.ui.currentImageElement = null;
@@ -169,8 +203,8 @@ export class EditorPage {
       if (typeof win.updateLocalServerUI === 'function') {
         win.updateLocalServerUI();
       }
-      if (typeof win.updateNetlifyStatus === 'function') {
-        win.updateNetlifyStatus();
+      if (typeof win.updateProviderStatus === 'function') {
+        win.updateProviderStatus();
       }
     }, htmlContent);
     

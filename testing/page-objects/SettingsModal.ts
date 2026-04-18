@@ -9,10 +9,14 @@ import { Page, Locator } from '@playwright/test';
 export class SettingsModal {
   readonly page: Page;
   readonly modal: Locator;
+  readonly deployProviderSelect: Locator;
   readonly projectFolderInput: Locator;
   readonly selectFolderButton: Locator;
   readonly tokenInput: Locator;
   readonly siteIdInput: Locator;
+  readonly cloudflareTokenInput: Locator;
+  readonly cloudflareAccountIdInput: Locator;
+  readonly cloudflareProjectNameInput: Locator;
   readonly saveButton: Locator;
   readonly cancelButton: Locator;
   readonly closeButton: Locator;
@@ -20,10 +24,14 @@ export class SettingsModal {
   constructor(page: Page) {
     this.page = page;
     this.modal = page.locator('#settings-modal');
+    this.deployProviderSelect = page.locator('#deploy-provider');
     this.projectFolderInput = page.locator('#project-folder');
     this.selectFolderButton = page.locator('#btn-select-folder');
     this.tokenInput = page.locator('#netlify-token');
     this.siteIdInput = page.locator('#netlify-siteId');
+    this.cloudflareTokenInput = page.locator('#cloudflare-token');
+    this.cloudflareAccountIdInput = page.locator('#cloudflare-accountId');
+    this.cloudflareProjectNameInput = page.locator('#cloudflare-projectName');
     this.saveButton = page.locator('#settings-save');
     this.cancelButton = page.locator('#settings-cancel');
     this.closeButton = page.locator('#settings-close');
@@ -108,6 +116,16 @@ export class SettingsModal {
   async fillNetlifySettings(token: string, siteId?: string) {
     await this.setToken(token);
     if (siteId) await this.setSiteId(siteId);
+  }
+
+  async setDeployProvider(provider: 'netlify' | 'cloudflare') {
+    await this.deployProviderSelect.selectOption(provider);
+  }
+
+  async fillCloudflareSettings(apiToken: string, accountId: string, projectName: string) {
+    await this.cloudflareTokenInput.fill(apiToken);
+    await this.cloudflareAccountIdInput.fill(accountId);
+    await this.cloudflareProjectNameInput.fill(projectName);
   }
 
   /**

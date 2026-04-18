@@ -1,6 +1,7 @@
 // Bake-build reads .env from the module root, generates a short-lived Go file that sets
-// bakedNetlifyToken / bakedNetlifySiteID in init(), runs go build, then deletes the
-// generated file (unless -keep). Use this instead of hand-written -ldflags -X.
+// bakedNetlifyToken / bakedNetlifySiteID, optional Cloudflare baked vars, and optional
+// bakedDeployProvider (from PROJECTWHY_DEFAULT_DEPLOY_PROVIDER) in init(),
+// runs go build, then deletes the generated file (unless -keep). Use this instead of hand-written -ldflags -X.
 package main
 
 import (
@@ -44,12 +45,16 @@ func findModuleRoot() (string, error) {
 	}
 }
 
-func writeGen(root, token, siteID string) (string, error) {
+func writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider string) (string, error) {
 	path := filepath.Join(root, "cmd/projectwhy", genFileName)
 	var b strings.Builder
 	b.WriteString(genPreamble)
 	fmt.Fprintf(&b, "\tbakedNetlifyToken = %s\n", strconv.Quote(token))
 	fmt.Fprintf(&b, "\tbakedNetlifySiteID = %s\n", strconv.Quote(siteID))
+	fmt.Fprintf(&b, "\tbakedCfApiToken = %s\n", strconv.Quote(cfTok))
+	fmt.Fprintf(&b, "\tbakedCfAccountID = %s\n", strconv.Quote(cfAcct))
+	fmt.Fprintf(&b, "\tbakedCfProjectName = %s\n", strconv.Quote(cfProj))
+	fmt.Fprintf(&b, "\tbakedDeployProvider = %s\n", strconv.Quote(deployProvider))
 	b.WriteString("}\n")
 	err := os.WriteFile(path, []byte(b.String()), 0o600)
 	return path, err
@@ -100,7 +105,7 @@ func main() {
 		envAbs = filepath.Join(root, envAbs)
 	}
 
-	var token, siteID string
+	var token, siteID, cfTok, cfAcct, cfProj, deployProvider string
 	m, err := envload.ParseFile(envAbs)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -111,17 +116,21 @@ func main() {
 	} else {
 		token = strings.TrimSpace(m["PROJECTWHY_NETLIFY_TOKEN"])
 		siteID = strings.TrimSpace(m["PROJECTWHY_NETLIFY_SITE_ID"])
+		cfTok = strings.TrimSpace(m["PROJECTWHY_CF_API_TOKEN"])
+		cfAcct = strings.TrimSpace(m["PROJECTWHY_CF_ACCOUNT_ID"])
+		cfProj = strings.TrimSpace(m["PROJECTWHY_CF_PROJECT_NAME"])
+		deployProvider = strings.TrimSpace(m["PROJECTWHY_DEFAULT_DEPLOY_PROVIDER"])
 	}
 
-	baked := token != "" || siteID != ""
+	baked := token != "" || siteID != "" || cfTok != "" || cfAcct != "" || cfProj != "" || deployProvider != ""
 	if baked {
-		if _, err := writeGen(root, token, siteID); err != nil {
+		if _, err := writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider); err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println("bake-build: baked PROJECTWHY_NETLIFY_TOKEN / PROJECTWHY_NETLIFY_SITE_ID from", envAbs)
+		fmt.Println("bake-build: baked deploy defaults from", envAbs)
 	} else {
 		removeGen(genPath)
-		fmt.Println("bake-build: no Netlify keys in .env; building without baked defaults")
+		fmt.Println("bake-build: no deploy keys in .env; building without baked defaults")
 	}
 
 	if !*keep {

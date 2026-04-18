@@ -37,9 +37,17 @@ func init() {
 //
 //	go run ./cmd/bake-build -o dist/projectwhy
 //
-// Or: go build -ldflags "-X main.bakedNetlifyToken=TOKEN -X main.bakedNetlifySiteID=ID"
+// Or: go build -ldflags "-X main.bakedNetlifyToken=TOKEN -X main.bakedNetlifySiteID=ID -X main.bakedDeployProvider=cloudflare"
 var bakedNetlifyToken string
 var bakedNetlifySiteID string
+
+// Optional Cloudflare Pages defaults (bake-build or -ldflags).
+var bakedCfApiToken string
+var bakedCfAccountID string
+var bakedCfProjectName string
+
+// Default deploy UI/API selection: bake-build, -ldflags -X main.bakedDeployProvider=..., or PROJECTWHY_DEFAULT_DEPLOY_PROVIDER.
+var bakedDeployProvider string
 
 func defaultProjectDir() string {
 	if runtime.GOOS == "windows" {
@@ -87,6 +95,47 @@ func resolvedNetlifyDefaults() httpserver.NetlifyDefaults {
 		siteID = bakedNetlifySiteID
 	}
 	return httpserver.NetlifyDefaults{Token: token, SiteID: siteID}
+}
+
+func resolvedCloudflareDefaults() httpserver.CloudflareDefaults {
+	apiTok := os.Getenv("PROJECTWHY_CF_API_TOKEN")
+	if apiTok == "" {
+		apiTok = bakedCfApiToken
+	}
+	acct := os.Getenv("PROJECTWHY_CF_ACCOUNT_ID")
+	if acct == "" {
+		acct = bakedCfAccountID
+	}
+	proj := os.Getenv("PROJECTWHY_CF_PROJECT_NAME")
+	if proj == "" {
+		proj = bakedCfProjectName
+	}
+	return httpserver.CloudflareDefaults{APIToken: apiTok, AccountID: acct, ProjectName: proj}
+}
+
+func normalizeDeployProvider(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	switch s {
+	case "cloudflare":
+		return "cloudflare"
+	case "netlify":
+		return "netlify"
+	default:
+		return ""
+	}
+}
+
+// resolvedDeployProviderDefault returns netlify or cloudflare for GET /api/project/config when the project file omits provider.
+// Precedence: PROJECTWHY_DEFAULT_DEPLOY_PROVIDER > baked value > cloudflare.
+func resolvedDeployProviderDefault() string {
+	raw := os.Getenv("PROJECTWHY_DEFAULT_DEPLOY_PROVIDER")
+	if raw == "" {
+		raw = bakedDeployProvider
+	}
+	if n := normalizeDeployProvider(raw); n != "" {
+		return n
+	}
+	return "cloudflare"
 }
 
 func resolveProjectDir(flagPath string) string {
@@ -152,7 +201,7 @@ func main() {
 		log.Fatalf("project dir: %v", err)
 	}
 
-	srv := httpserver.New(pr, editorHTML, *listen, resolvedNetlifyDefaults(), version)
+	srv := httpserver.New(pr, editorHTML, *listen, resolvedNetlifyDefaults(), resolvedCloudflareDefaults(), resolvedDeployProviderDefault(), version)
 
 	tryShutdownExisting(*listen)
 

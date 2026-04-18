@@ -3,7 +3,7 @@ import { EditorPage, SettingsModal } from '../page-objects';
 import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../helpers';
 
 /**
- * Netlify Configuration Tests
+ * Deploy configuration tests (Netlify + Cloudflare Pages)
  *
  * Tests the settings modal and Netlify configuration:
  * - Opening and closing the settings modal
@@ -12,7 +12,7 @@ import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../help
  * - Deploy button state based on configuration
  * - Status indicator updates
  */
-test.describe('Netlify Configuration', () => {
+test.describe('Deploy configuration', () => {
   let editor: EditorPage;
   let settings: SettingsModal;
 
@@ -121,7 +121,7 @@ test.describe('Netlify Configuration', () => {
   });
 
   test('status indicator should show "Not configured" initially', async () => {
-    await expect(editor.netlifyStatusText).toContainText('Not configured');
+    await expect(editor.providerStatusText).toContainText('Not configured');
   });
 
   test('status indicator should update after saving config', async () => {
@@ -129,7 +129,7 @@ test.describe('Netlify Configuration', () => {
     await settings.setToken('my-token');
     await settings.save();
     
-    await expect(editor.netlifyStatusText).toContainText('New site on deploy');
+    await expect(editor.providerStatusText).toContainText('New site on deploy');
   });
 
   test('status indicator should show site ID when configured', async () => {
@@ -137,12 +137,12 @@ test.describe('Netlify Configuration', () => {
     await settings.fillNetlifySettings('my-token', 'abc123');
     await settings.save();
     
-    await expect(editor.netlifyStatusText).toContainText('Site: abc123');
+    await expect(editor.providerStatusText).toContainText('Site: abc123');
   });
 
   test('status dot should indicate connection state', async ({ page }) => {
     // Initially not connected (no 'connected' class)
-    let hasConnected = await editor.netlifyStatus.evaluate(el => 
+    let hasConnected = await editor.providerStatus.evaluate(el => 
       el.classList.contains('connected')
     );
     expect(hasConnected).toBe(false);
@@ -152,7 +152,7 @@ test.describe('Netlify Configuration', () => {
     await settings.setToken('my-token');
     await settings.save();
     
-    hasConnected = await editor.netlifyStatus.evaluate(el => 
+    hasConnected = await editor.providerStatus.evaluate(el => 
       el.classList.contains('connected')
     );
     expect(hasConnected).toBe(true);
@@ -181,6 +181,36 @@ test.describe('Netlify Configuration', () => {
   test('token input should be password type', async () => {
     await settings.open();
     await expect(settings.tokenInput).toHaveAttribute('type', 'password');
+  });
+
+  test('cloudflare token input should be password type', async () => {
+    await settings.open();
+    await settings.setDeployProvider('cloudflare');
+    await expect(settings.cloudflareTokenInput).toHaveAttribute('type', 'password');
+  });
+
+  test('saving Cloudflare config updates state', async ({ page }) => {
+    await settings.open();
+    await settings.setDeployProvider('cloudflare');
+    await settings.fillCloudflareSettings('cf-token', 'acc123', 'my-pages');
+    await settings.save();
+
+    const cf = await page.evaluate(() => (window as any).state?.cloudflareConfig);
+    expect(cf).toMatchObject({
+      apiToken: 'cf-token',
+      accountId: 'acc123',
+      projectName: 'my-pages',
+    });
+    const prov = await page.evaluate(() => (window as any).state?.deployProvider);
+    expect(prov).toBe('cloudflare');
+  });
+
+  test('status shows Cloudflare project when configured', async () => {
+    await settings.open();
+    await settings.setDeployProvider('cloudflare');
+    await settings.fillCloudflareSettings('t', 'acct', 'projname');
+    await settings.save();
+    await expect(editor.providerStatusText).toContainText('Project: projname');
   });
 });
 
