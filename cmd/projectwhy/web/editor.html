@@ -1701,43 +1701,52 @@
                 if (computedStyle.position === 'static') {
                     el.style.position = 'relative';
                 }
-                
+
                 // Check if element was previously hidden (has display:none)
                 const isHidden = el.style.display === 'none';
                 if (isHidden) {
                     el.setAttribute('data-cms-hidden', 'true');
                     el.style.display = ''; // Remove inline display:none so we can show it in editor
                 }
-                
+
                 // Add toggle toolbar
                 const toolbar = doc.createElement('div');
                 toolbar.className = 'cms-toggle-toolbar';
-                updateToggleButton(toolbar, isHidden);
+                const btn = doc.createElement('button');
+                btn.className = 'cms-toggle-btn';
+                toolbar.appendChild(btn);
+                updateToggleButton(btn, isHidden);
                 el.appendChild(toolbar);
-                
+
                 // Setup toggle button
-                toolbar.querySelector('.cms-toggle-btn').addEventListener('click', (e) => {
+                btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
                     const currentlyHidden = el.getAttribute('data-cms-hidden') === 'true';
                     const newHidden = !currentlyHidden;
-                    
+
                     if (newHidden) {
                         el.setAttribute('data-cms-hidden', 'true');
                     } else {
                         el.removeAttribute('data-cms-hidden');
                     }
-                    
-                    updateToggleButton(toolbar, newHidden);
+
+                    updateToggleButton(btn, newHidden);
                     showToast(newHidden ? 'Element verborgen' : 'Element zichtbaar', 'success');
                 });
             });
         }
         
-        function updateToggleButton(toolbar, isHidden) {
-            toolbar.innerHTML = isHidden
-                ? `<button class="cms-toggle-btn hidden" title="Dit element tonen">👁️‍🗨️ Tonen</button>`
-                : `<button class="cms-toggle-btn" title="Dit element verbergen">👁️ Zichtbaar</button>`;
+        function updateToggleButton(btn, isHidden) {
+            if (isHidden) {
+                btn.className = 'cms-toggle-btn hidden';
+                btn.title = 'Dit element tonen';
+                btn.textContent = '👁️‍🗨️ Tonen';
+            } else {
+                btn.className = 'cms-toggle-btn';
+                btn.title = 'Dit element verbergen';
+                btn.textContent = '👁️ Zichtbaar';
+            }
         }
 
         function setupRepeatableSections(doc) {
