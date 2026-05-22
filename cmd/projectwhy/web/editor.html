@@ -740,6 +740,11 @@
         }
 
         /** Same content hash as Wrangler Pages (blake3 of utf8(base64 + extension), first 32 hex chars). */
+        function hasDebugParam() {
+            return new URLSearchParams(location.search).has('debug');
+        }
+
+        /** Same content hash as Wrangler Pages (blake3 of utf8(base64 + extension), first 32 hex chars). */
         async function cfPagesContentHash(buffer, relativePath) {
             const name = relativePath.replace(/\\/g, '/');
             const dot = name.lastIndexOf('.');
@@ -954,7 +959,7 @@
                 showStartupLoader('Website synchroniseren met host…');
                 try {
                     await syncHttpProjectConfig();
-                    if (canDownloadFromHost()) {
+                    if (canDownloadFromHost() && !hasDebugParam()) {
                         setStartupLoaderMessage('Laatste versie downloaden van website (Website → laptop)…');
                         const pulled = await runDownload();
                         if (!pulled) {
