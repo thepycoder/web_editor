@@ -86,3 +86,5 @@ Unsigned builds may trigger **Windows SmartScreen** ("Windows protected your PC"
 **Stopping the server:** close the console window (console builds only), press Ctrl+C in that console, or use **Stop local server** in the editor status bar (HTTP mode only; may report a connection error after exit, which is normal). With a `-H windowsgui` build there is no console—use **Stop local server** or end the process in Task Manager.
 
 **Changing the editor UI:** edit [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html), then `go build` (the file is embedded at compile time).
+
+**Debug mode:** append `?debug` to the editor URL (e.g. `http://127.0.0.1:4070/editor.html?debug`) to skip the automatic download from the live website on startup. This is useful when you have made local template changes (such as adding `data-toggleable` attributes) and do not want them overwritten by the deployed version.
