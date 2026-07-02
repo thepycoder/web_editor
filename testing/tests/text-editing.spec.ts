@@ -111,6 +111,29 @@ test.describe('Text Editing (data-editable)', () => {
     await expect(para).toHaveText('New paragraph');
   });
 
+  test('enter in editable text should preserve blank lines on export', async ({ page }) => {
+    const description = preview.getEditableText('#main-description');
+
+    await description.fill('Line one');
+    await description.evaluate(el => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Line three');
+
+    const html = await description.evaluate(el => el.innerHTML);
+    expect(html).toBe('Line one<br><br>Line three');
+
+    const content = await editor.getEditedContent();
+    expect(content).toContain('Line one<br><br>Line three');
+  });
+
   test('enter in editable text should insert line breaks without block wrappers', async ({ page }) => {
     const description = preview.getEditableText('#main-description');
 

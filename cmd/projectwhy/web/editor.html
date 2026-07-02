@@ -462,6 +462,76 @@
             border-color: var(--danger);
         }
 
+        /* Deploy Success Modal */
+        .deploy-success-modal .modal {
+            width: 420px;
+            overflow: hidden;
+        }
+
+        .deploy-success-hero {
+            padding: 36px 28px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            text-align: center;
+        }
+
+        .deploy-success-graphic {
+            width: 112px;
+            height: 112px;
+            flex-shrink: 0;
+        }
+
+        .deploy-success-graphic .deploy-ring {
+            transform-origin: 56px 56px;
+            animation: deployRingIn 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) forwards;
+        }
+
+        .deploy-success-graphic .deploy-check {
+            stroke-dasharray: 36;
+            stroke-dashoffset: 36;
+            animation: deployCheckDraw 0.45s ease 0.35s forwards;
+        }
+
+        .deploy-success-graphic .deploy-arrow {
+            opacity: 0;
+            transform: translateX(-6px);
+            animation: deployArrowIn 0.4s ease 0.55s forwards;
+        }
+
+        @keyframes deployRingIn {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes deployCheckDraw {
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes deployArrowIn {
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .deploy-success-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .deploy-success-message {
+            font-size: 14px;
+            line-height: 1.55;
+            color: var(--text-muted);
+            max-width: 320px;
+        }
+
+        .deploy-success-modal .modal-footer {
+            justify-content: center;
+            padding: 20px 28px 28px;
+            border-top: none;
+        }
+
         @keyframes slideIn {
             from {
                 transform: translateX(100%);
@@ -616,6 +686,31 @@
             <div class="modal-footer">
                 <button class="btn" id="settings-cancel">Annuleren</button>
                 <button class="btn btn-primary" id="settings-save">Configuratie opslaan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deploy Success Modal -->
+    <div class="modal-overlay deploy-success-modal" id="deploy-success-modal">
+        <div class="modal">
+            <div class="deploy-success-hero">
+                <div class="deploy-success-graphic" aria-hidden="true">
+                    <svg viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle class="deploy-ring" cx="56" cy="56" r="48" stroke="#3fb950" stroke-width="3" fill="rgba(63,185,80,0.08)"/>
+                        <path class="deploy-check" d="M38 56 L50 68 L74 44" stroke="#3fb950" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path class="deploy-arrow" d="M82 30 L98 30 M98 30 L98 46 M98 30 L88 40" stroke="#58a6ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <rect class="deploy-arrow" x="14" y="78" width="52" height="22" rx="4" stroke="#30363d" stroke-width="2" fill="#161b22"/>
+                        <circle class="deploy-arrow" cx="22" cy="86" r="2" fill="#8b949e"/>
+                        <circle class="deploy-arrow" cx="30" cy="86" r="2" fill="#8b949e"/>
+                        <circle class="deploy-arrow" cx="38" cy="86" r="2" fill="#8b949e"/>
+                        <rect class="deploy-arrow" x="20" y="92" width="28" height="3" rx="1.5" fill="#30363d"/>
+                    </svg>
+                </div>
+                <h2 class="deploy-success-title">Publicatie gelukt!</h2>
+                <p class="deploy-success-message">Je website staat online. Open een nieuwe tab en kijk maar eens!</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="deploy-success-close" style="min-width: 140px; justify-content: center;">Begrepen</button>
             </div>
         </div>
     </div>
@@ -1125,6 +1220,10 @@
         // ============================================
         function closeModal(modalId) {
             $(modalId).classList.remove('active');
+        }
+
+        function showDeploySuccessModal() {
+            $('deploy-success-modal').classList.add('active');
         }
 
         // ============================================
@@ -1666,7 +1765,7 @@
 
             const tag = node.tagName.toLowerCase();
             if (tag === 'br') {
-                appendBreak(parts);
+                appendExplicitBreak(parts);
                 return;
             }
 
@@ -1697,6 +1796,10 @@
                 'pre', 'section', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
                 'tr', 'ul'
             ].includes(tag);
+        }
+
+        function appendExplicitBreak(parts) {
+            parts.push('<br>');
         }
 
         function appendBreak(parts) {
@@ -2461,16 +2564,8 @@
                     { method: 'POST', body: form }
                 );
 
-                const siteUrl = deployment.url || deployment.latest_stage?.url || '';
                 dismissMergeToast(mergeKey);
-                showToast('Gepubliceerd naar Cloudflare Pages!', 'success');
-                if (siteUrl) {
-                    setTimeout(() => {
-                        if (confirm(`Publicatie gelukt!\n\n${siteUrl} openen?`)) {
-                            window.open(siteUrl, '_blank');
-                        }
-                    }, 500);
-                }
+                showDeploySuccessModal();
             } catch (err) {
                 dismissMergeToast('cf-deploy');
                 showToast('Cloudflare-publicatie mislukt: ' + err.message, 'error');
@@ -2631,15 +2726,7 @@
                 }
 
                 dismissMergeToast('netlify-deploy');
-                showToast('Gepubliceerd naar Netlify!', 'success');
-                
-                // Open the deployed site
-                setTimeout(() => {
-                    if (confirm(`Publicatie gelukt!\n\n${siteUrl} openen?`)) {
-                        window.open(siteUrl, '_blank');
-                    }
-                }, 500);
-                
+                showDeploySuccessModal();
             } catch (err) {
                 dismissMergeToast('netlify-deploy');
                 showToast('Netlify-publicatie mislukt: ' + err.message, 'error');
@@ -3028,6 +3115,13 @@
         $('settings-modal').addEventListener('click', (e) => {
             if (e.target === $('settings-modal')) {
                 closeModal('settings-modal');
+            }
+        });
+
+        $('deploy-success-close').addEventListener('click', () => closeModal('deploy-success-modal'));
+        $('deploy-success-modal').addEventListener('click', (e) => {
+            if (e.target === $('deploy-success-modal')) {
+                closeModal('deploy-success-modal');
             }
         });
 

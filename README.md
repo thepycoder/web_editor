@@ -59,6 +59,12 @@ Flags:
 - `PROJECTWHY_DIR` — project root when `-project` is not set (default: `%USERPROFILE%\ProjectWhyWebsite` on Windows, `~/ProjectWhyWebsite` elsewhere)
 - `-no-browser` — do not open a browser tab
 
+## Staging
+
+``` go run ./cmd/projectwhy -project ~/ProjectWhyWebsite-staging -listen 127.0.0.1:4070```
+
+This runs the whole tool on a staging website, so one can test properly.
+
 ## Versioning
 
 The semver lives in [internal/version/version.go](internal/version/version.go) and is shown in the editor status bar.
