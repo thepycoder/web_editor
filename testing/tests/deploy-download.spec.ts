@@ -5,8 +5,7 @@ import { TEST_TEMPLATE, waitForEditorReady, resetEmptyCmsFixture } from '../help
 /**
  * Deploy download & sync tests (Netlify + Cloudflare)
  *
- * Tests the download from Netlify functionality:
- * - Download button state based on configuration
+ * Tests download/sync support (Netlify + Cloudflare):
  * - Project folder selection and persistence
  * - Sync behavior (delete stale files)
  * - IndexedDB storage for folder handles
@@ -37,26 +36,6 @@ test.describe('Deploy download & sync', () => {
     await editor.injectFsBackendOnly();
   });
 
-  test('download button should be disabled without configuration', async () => {
-    await expect(editor.btnDownloadNetlify).toBeDisabled();
-  });
-
-  test('download button should be disabled with only token (no site ID)', async () => {
-    await settings.open();
-    await settings.setToken('test-token');
-    await settings.save();
-
-    await expect(editor.btnDownloadNetlify).toBeDisabled();
-  });
-
-  test('download button should be enabled with token and site ID', async () => {
-    await settings.open();
-    await settings.fillNetlifySettings('test-token', 'test-site-id');
-    await settings.save();
-
-    await expect(editor.btnDownloadNetlify).toBeEnabled();
-  });
-
   test('settings modal should have project folder field', async () => {
     await settings.open();
 
@@ -78,23 +57,6 @@ test.describe('Deploy download & sync', () => {
 
     // The folder name should match the mock dirHandle name set by injectTestContent
     expect(await settings.getProjectFolder()).toBe('Test Project');
-  });
-
-  test('download button state should update after config change', async () => {
-    // Initially disabled
-    await expect(editor.btnDownloadNetlify).toBeDisabled();
-
-    // Add token only - still disabled
-    await settings.open();
-    await settings.setToken('my-token');
-    await settings.save();
-    await expect(editor.btnDownloadNetlify).toBeDisabled();
-
-    // Add site ID - now enabled
-    await settings.open();
-    await settings.setSiteId('my-site');
-    await settings.save();
-    await expect(editor.btnDownloadNetlify).toBeEnabled();
   });
 
   test('IndexedDB should be used for directory handle storage', async ({ page }) => {
@@ -147,21 +109,6 @@ test.describe('Deploy download & sync', () => {
     expect(savedConfig.folderName).toBe('selected-folder');
   });
 
-  test('download button enabled for Cloudflare when all fields set', async () => {
-    await settings.open();
-    await settings.setDeployProvider('cloudflare');
-    await settings.fillCloudflareSettings('tok', 'accid', 'proj');
-    await settings.save();
-    await expect(editor.btnDownloadNetlify).toBeEnabled();
-  });
-
-  test('download button disabled for Cloudflare without project name', async () => {
-    await settings.open();
-    await settings.setDeployProvider('cloudflare');
-    await settings.fillCloudflareSettings('tok', 'accid', '');
-    await settings.save();
-    await expect(editor.btnDownloadNetlify).toBeDisabled();
-  });
 });
 
 test.describe('Download Sync Behavior', () => {

@@ -562,9 +562,6 @@
         <button class="btn btn-primary" id="btn-settings">
             <span>⚙️</span> Instellingen
         </button>
-        <button class="btn" id="btn-download-netlify" disabled title="Download de huidige site van je host">
-            <span>☁️</span> Website → laptop
-        </button>
         <button class="btn btn-success" id="btn-deploy-netlify" disabled>
             <span>🚀</span> Laptop → website
         </button>
@@ -924,7 +921,7 @@
             root.setAttribute('aria-busy', 'false');
         }
 
-        /** Same rules as Website → Laptop (download) availability. */
+        /** Whether startup can pull the latest site from the configured host. */
         function canDownloadFromHost() {
             const p = normalizeDeployProvider(state.deployProvider);
             if (p === 'cloudflare') {
@@ -1055,7 +1052,7 @@
                 try {
                     await syncHttpProjectConfig();
                     if (canDownloadFromHost() && !hasDebugParam()) {
-                        setStartupLoaderMessage('Laatste versie downloaden van website (Website → laptop)…');
+                        setStartupLoaderMessage('Laatste versie downloaden van website…');
                         const pulled = await runDownload();
                         if (!pulled) {
                             await loadHttpProjectContent();
@@ -1348,6 +1345,8 @@
         function getEditedContent() {
             const doc = $('preview-frame').contentDocument;
             if (!doc) return state.content.original;
+
+            syncResponsiveNavigation(doc);
             
             // Clone the document to remove editor-specific elements
             const clone = doc.cloneNode(true);
@@ -1644,6 +1643,27 @@
                 el.setAttribute('contenteditable', 'true');
                 attachEditableTextGuards(el);
             });
+
+            doc.querySelectorAll('.nav__list [data-editable]').forEach(el => {
+                el.addEventListener('blur', () => syncResponsiveNavigation(doc));
+                el.addEventListener('click', (e) => {
+                    if (!e.altKey) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const link = el.closest('a');
+                    if (!link) return;
+                    openNavLinkModal(link);
+                });
+            });
+
+            doc.querySelectorAll('.nav__list > li > a').forEach(link => {
+                if (link.querySelector('[data-editable]')) return;
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openNavLinkModal(link);
+                });
+            });
             
             // Setup image replacement
             doc.querySelectorAll('[data-editable-image]').forEach(img => {
@@ -1657,13 +1677,16 @@
             // Setup link editing
             doc.querySelectorAll('[data-editable-link]').forEach(link => {
                 link.addEventListener('click', (e) => {
+                    if (link.closest('.nav__list') && e.target.closest('[data-editable]')) {
+                        return;
+                    }
                     e.preventDefault();
                     e.stopPropagation();
-                    state.ui.currentLinkElement = link;
-                    $('link-text').value = link.textContent || '';
-                    $('link-url').value = link.getAttribute('href') || '#';
-                    $('link-modal').classList.add('active');
-                    $('link-text').focus();
+                    if (link.closest('.nav-mobile')) {
+                        showToast('Bewerk menu-items via het desktopmenu bovenaan', 'info');
+                        return;
+                    }
+                    openNavLinkModal(link);
                 });
             });
             
@@ -2015,6 +2038,64 @@
                 Array.from(container.children).forEach(child => attachSectionToolbar(child, container, doc));
             });
         }
+
+        function navLinkLabel(link) {
+            if (!link) return '';
+            const label = link.querySelector('[data-editable]');
+            return (label || link).textContent || '';
+        }
+
+        function setNavLinkLabel(link, text) {
+            if (!link) return;
+            const label = link.querySelector('[data-editable]');
+            if (label) label.textContent = text;
+            else link.textContent = text;
+        }
+
+        function openNavLinkModal(link) {
+            state.ui.currentLinkElement = link;
+            $('link-text').value = navLinkLabel(link);
+            $('link-url').value = link.getAttribute('href') || '#';
+            $('link-modal').classList.add('active');
+            $('link-text').focus();
+        }
+
+        /** Copy desktop header nav labels and hrefs to mobile; CTAs also sync href. */
+        function syncResponsiveNavigation(doc) {
+            if (!doc) return;
+            const desktopList = doc.querySelector('.nav__list');
+            const mobileList = doc.querySelector('.nav-mobile__list');
+            if (!desktopList || !mobileList) return;
+
+            const desktopAnchors = [...desktopList.querySelectorAll(':scope > li > a')];
+            const mobileItems = [...mobileList.querySelectorAll(':scope > li > a.nav-mobile__link')];
+            for (let i = 0; i < desktopAnchors.length && i < mobileItems.length; i++) {
+                mobileItems[i].textContent = navLinkLabel(desktopAnchors[i]);
+                mobileItems[i].setAttribute('href', desktopAnchors[i].getAttribute('href') || '#');
+            }
+
+            const desktopCtas = [...doc.querySelectorAll('.nav > a[data-editable-link]')];
+            for (const desktopCta of desktopCtas) {
+                const href = desktopCta.getAttribute('href') || '#';
+                let mobileCta = null;
+                if (href.startsWith('tel:')) {
+                    mobileCta = mobileList.querySelector(':scope > li > a[href^="tel:"]');
+                } else {
+                    mobileCta = [...mobileList.querySelectorAll(':scope > li > a.btn')].find(a => {
+                        const h = a.getAttribute('href') || '';
+                        return !h.startsWith('tel:');
+                    });
+                }
+                if (mobileCta) {
+                    mobileCta.textContent = navLinkLabel(desktopCta);
+                    mobileCta.setAttribute('href', href);
+                }
+            }
+        }
+
+        function isDesktopHeaderNavLink(link) {
+            return !!(link && link.closest('.nav') && !link.closest('.nav-mobile'));
+        }
         
         function attachSectionToolbar(element, container, doc) {
             // Remove any existing toolbar (from cloneNode)
@@ -2060,10 +2141,64 @@
         // ============================================
         // Image Replacement
         // ============================================
+        const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+        const MAX_IMAGE_PIXELS = 40_000_000;
+        const MAX_IMAGE_DIMENSION = 12000;
+        const DEFAULT_CARD_WIDTHS = [320, 576, 800];
+
+        function parseSrcsetWidths(srcset) {
+            if (!srcset) return [];
+            const widths = [];
+            for (const part of srcset.split(',')) {
+                const m = part.trim().match(/\s(\d+)w$/);
+                if (m) widths.push(parseInt(m[1], 10));
+            }
+            return widths;
+        }
+
+        function collectAssetNamesFromSrcset(srcset) {
+            const names = new Set();
+            if (!srcset) return names;
+            for (const part of srcset.split(',')) {
+                const url = part.trim().split(/\s+/)[0];
+                if (!url) continue;
+                if (url.startsWith('./assets/')) {
+                    names.add(url.slice('./assets/'.length));
+                } else if (url.startsWith('blob:')) {
+                    for (const [fn, blobUrl] of state.assetBlobUrls) {
+                        if (blobUrl === url) {
+                            names.add(fn);
+                            break;
+                        }
+                    }
+                }
+            }
+            return names;
+        }
+
+        function getRequiredWidthsForImage(img) {
+            const picture = img.closest('picture');
+            if (picture) {
+                const widths = new Set();
+                picture.querySelectorAll('source[srcset]').forEach(source => {
+                    parseSrcsetWidths(source.getAttribute('srcset')).forEach(w => widths.add(w));
+                });
+                parseSrcsetWidths(img.getAttribute('srcset')).forEach(w => widths.add(w));
+                if (widths.size === 0) {
+                    return [480, 900, 960, 1200, 1300, 1920];
+                }
+                return [...widths].sort((a, b) => a - b);
+            }
+            const fromSrcset = parseSrcsetWidths(img.getAttribute('srcset'));
+            if (fromSrcset.length) return fromSrcset;
+            return DEFAULT_CARD_WIDTHS;
+        }
+
         function collectImageAssetFilenames(img) {
             const names = new Set();
             const main = img.dataset.assetFilename;
             if (main) names.add(main);
+            collectAssetNamesFromSrcset(img.getAttribute('srcset')).forEach(n => names.add(n));
             const src = img.getAttribute('src') || '';
             if (src.startsWith('./assets/')) {
                 names.add(src.slice('./assets/'.length));
@@ -2075,46 +2210,73 @@
                     }
                 }
             }
-            const srcset = img.getAttribute('srcset');
-            if (srcset) {
-                for (const part of srcset.split(',')) {
-                    const url = part.trim().split(/\s+/)[0];
-                    if (!url) continue;
-                    if (url.startsWith('./assets/')) {
-                        names.add(url.slice('./assets/'.length));
-                    } else if (url.startsWith('blob:')) {
-                        for (const [fn, blobUrl] of state.assetBlobUrls) {
-                            if (blobUrl === url) {
-                                names.add(fn);
-                                break;
-                            }
-                        }
-                    }
-                }
+            const picture = img.closest('picture');
+            if (picture) {
+                picture.querySelectorAll('source[srcset]').forEach(source => {
+                    collectAssetNamesFromSrcset(source.getAttribute('srcset')).forEach(n => names.add(n));
+                });
             }
             return [...names];
         }
 
-        function otherImagesUseAsset(doc, excludeImg, filename) {
+        function otherElementsUseAsset(doc, excludeRoot, filename) {
             if (!doc || !filename) return false;
             const blobUrl = state.assetBlobUrls.get(filename);
-            for (const el of doc.querySelectorAll('[data-editable-image]')) {
-                if (el === excludeImg) continue;
-                if (el.dataset.assetFilename === filename) return true;
+            const assetPath = `./assets/${filename}`;
+            for (const el of doc.querySelectorAll('img, source')) {
+                if (excludeRoot && excludeRoot.contains(el)) continue;
+                if (el.tagName.toLowerCase() === 'img' && el.dataset.assetFilename === filename) return true;
                 const src = el.getAttribute('src') || '';
-                if (blobUrl && src === blobUrl) return true;
-                if (src === `./assets/${filename}`) return true;
+                if (src === assetPath || (blobUrl && src === blobUrl)) return true;
                 const srcset = el.getAttribute('srcset') || '';
-                if (blobUrl && srcset.includes(blobUrl)) return true;
-                if (srcset.includes(`./assets/${filename}`)) return true;
+                if (srcset.includes(assetPath) || (blobUrl && srcset.includes(blobUrl))) return true;
             }
             return false;
         }
 
-        async function deleteReplacedImageAssets(doc, img, newNames, oldNames) {
+        async function validateImageUpload(file, targetImg) {
+            if (!file) throw new Error('Geen bestand gekozen.');
+            if (!file.type.startsWith('image/')) {
+                throw new Error('Kies een afbeeldingsbestand (JPG, PNG of WebP).');
+            }
+            const ext = (file.name.split('.').pop() || '').toLowerCase();
+            if (file.type === 'image/svg+xml' || ext === 'svg') {
+                throw new Error('SVG-bestanden worden niet ondersteund. Gebruik JPG, PNG of WebP.');
+            }
+            if (ext === 'heic' || ext === 'heif' || file.type === 'image/heic' || file.type === 'image/heif') {
+                throw new Error('HEIC/HEIF wordt niet ondersteund. Gebruik JPG of PNG.');
+            }
+            if (file.size > MAX_IMAGE_BYTES) {
+                throw new Error('Afbeelding is te groot (max. 15 MB).');
+            }
+
+            const bitmap = await createImageBitmap(file);
+            try {
+                if (bitmap.width < 1 || bitmap.height < 1) {
+                    throw new Error('Afbeelding heeft geen geldige afmetingen.');
+                }
+                if (bitmap.width > MAX_IMAGE_DIMENSION || bitmap.height > MAX_IMAGE_DIMENSION) {
+                    throw new Error('Afbeelding is te groot om te verwerken.');
+                }
+                if (bitmap.width * bitmap.height > MAX_IMAGE_PIXELS) {
+                    throw new Error('Afbeelding heeft te veel pixels om te verwerken.');
+                }
+                const requiredWidths = getRequiredWidthsForImage(targetImg);
+                const minWidth = Math.max(...requiredWidths);
+                if (bitmap.width < minWidth) {
+                    throw new Error(`Afbeelding is te klein: kies minstens ${minWidth}px breed voor deze foto.`);
+                }
+                return { bitmap, requiredWidths };
+            } catch (err) {
+                bitmap.close?.();
+                throw err;
+            }
+        }
+
+        async function deleteReplacedImageAssets(doc, excludeRoot, newNames, oldNames) {
             const newSet = new Set(newNames);
             for (const name of oldNames) {
-                if (newSet.has(name) || otherImagesUseAsset(doc, img, name)) continue;
+                if (newSet.has(name) || otherElementsUseAsset(doc, excludeRoot, name)) continue;
                 if (state.backend === 'http') {
                     try {
                         await fetch('/api/project/assets/' + encodeURIComponent(name), { method: 'DELETE' });
@@ -2134,13 +2296,10 @@
             }
         }
 
-        async function generateResponsiveWebPVariants(file) {
-            const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
-            const stem = `${name}-${Date.now()}`;
-            const bitmap = await createImageBitmap(file);
-            const widths = [320, 576, 800];
+        async function generateWebPVariantsFromBitmap(bitmap, stem, widths) {
+            const uniqueWidths = [...new Set(widths)].sort((a, b) => a - b);
             const blobs = new Map();
-            for (const w of widths) {
+            for (const w of uniqueWidths) {
                 const scale = w / bitmap.width;
                 const h = Math.max(1, Math.round(bitmap.height * scale));
                 let canvas;
@@ -2165,7 +2324,43 @@
                 }
                 blobs.set(`${stem}-${w}w.webp`, blob);
             }
-            return { stem, blobs };
+            return blobs;
+        }
+
+        function buildSrcsetFromWidths(widths, blobUrlByFilename, stem) {
+            return widths.map(w => {
+                const fname = `${stem}-${w}w.webp`;
+                return `${blobUrlByFilename.get(fname)} ${w}w`;
+            }).join(', ');
+        }
+
+        function applyImageReplacement(img, stem, blobUrlByFilename) {
+            const picture = img.closest('picture');
+            if (picture) {
+                picture.querySelectorAll('source[srcset]').forEach(source => {
+                    const widths = parseSrcsetWidths(source.getAttribute('srcset'));
+                    if (widths.length) {
+                        source.setAttribute('srcset', buildSrcsetFromWidths(widths, blobUrlByFilename, stem));
+                    }
+                });
+            }
+
+            const imgWidths = parseSrcsetWidths(img.getAttribute('srcset'));
+            const useWidths = imgWidths.length ? imgWidths : (picture ? [1920] : DEFAULT_CARD_WIDTHS);
+            if (useWidths.length) {
+                img.setAttribute('srcset', buildSrcsetFromWidths(useWidths, blobUrlByFilename, stem));
+            } else {
+                img.removeAttribute('srcset');
+            }
+            const mainW = Math.max(...useWidths);
+            const mainFile = `${stem}-${mainW}w.webp`;
+            img.src = blobUrlByFilename.get(mainFile);
+            img.dataset.assetFilename = mainFile;
+        }
+
+        function imageStemFromFile(file) {
+            const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
+            return `${name}-${Date.now()}`;
         }
 
         $('image-input').addEventListener('change', async (e) => {
@@ -2185,42 +2380,64 @@
             try {
                 const previewDoc = $('preview-frame').contentDocument;
                 const previousAssetNames = collectImageAssetFilenames(img);
+                const excludeRoot = img.closest('picture') || img;
+
                 if (state.backend === 'http') {
-                    const { stem, blobs } = await generateResponsiveWebPVariants(file);
+                    let bitmap;
+                    let requiredWidths;
+                    try {
+                        ({ bitmap, requiredWidths } = await validateImageUpload(file, img));
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        return;
+                    }
+
+                    const stem = imageStemFromFile(file);
+                    const blobs = await generateWebPVariantsFromBitmap(bitmap, stem, requiredWidths);
+                    bitmap.close?.();
+
                     const newNames = [...blobs.keys()];
+                    const blobUrlByFilename = new Map();
                     for (const [fname, blob] of blobs) {
                         const put = await fetch('/api/project/assets/' + encodeURIComponent(fname), {
                             method: 'PUT',
                             body: blob,
                         });
                         if (!put.ok) throw new Error('Upload failed: ' + fname);
-                        state.assetBlobUrls.set(fname, URL.createObjectURL(blob));
+                        blobUrlByFilename.set(fname, URL.createObjectURL(blob));
+                        state.assetBlobUrls.set(fname, blobUrlByFilename.get(fname));
                     }
-                    const mainFile = `${stem}-800w.webp`;
-                    img.src = state.assetBlobUrls.get(mainFile);
-                    img.dataset.assetFilename = mainFile;
-                    const srcsetParts = [320, 576, 800].map(
-                        w => `${state.assetBlobUrls.get(`${stem}-${w}w.webp`)} ${w}w`
-                    );
-                    img.setAttribute('srcset', srcsetParts.join(', '));
-                    await deleteReplacedImageAssets(previewDoc, img, newNames, previousAssetNames);
+
+                    applyImageReplacement(img, stem, blobUrlByFilename);
+                    await deleteReplacedImageAssets(previewDoc, excludeRoot, newNames, previousAssetNames);
                 } else {
-                    const ext = file.name.split('.').pop().toLowerCase();
-                    const name = file.name.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9]/g, '-');
-                    const newFilename = `${name}-${Date.now()}.${ext}`;
+                    let bitmap;
+                    try {
+                        ({ bitmap } = await validateImageUpload(file, img));
+                    } catch (err) {
+                        showToast(err.message, 'error');
+                        return;
+                    }
 
-                    const newFileHandle = await state.project.assetsHandle.getFileHandle(newFilename, { create: true });
-                    const writable = await newFileHandle.createWritable();
-                    await writable.write(file);
-                    await writable.close();
+                    const stem = imageStemFromFile(file);
+                    const requiredWidths = getRequiredWidthsForImage(img);
+                    const blobs = await generateWebPVariantsFromBitmap(bitmap, stem, requiredWidths);
+                    bitmap.close?.();
 
-                    const newBlobUrl = URL.createObjectURL(file);
-                    state.assetBlobUrls.set(newFilename, newBlobUrl);
+                    const newNames = [];
+                    for (const [fname, blob] of blobs) {
+                        const newFileHandle = await state.project.assetsHandle.getFileHandle(fname, { create: true });
+                        const writable = await newFileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                        const blobUrl = URL.createObjectURL(blob);
+                        state.assetBlobUrls.set(fname, blobUrl);
+                        newNames.push(fname);
+                    }
 
-                    img.src = newBlobUrl;
-                    img.dataset.assetFilename = newFilename;
-                    img.removeAttribute('srcset');
-                    await deleteReplacedImageAssets(previewDoc, img, [newFilename], previousAssetNames);
+                    const blobUrlByFilename = new Map(newNames.map(fn => [fn, state.assetBlobUrls.get(fn)]));
+                    applyImageReplacement(img, stem, blobUrlByFilename);
+                    await deleteReplacedImageAssets(previewDoc, excludeRoot, newNames, previousAssetNames);
                 }
 
                 showToast('Afbeelding vervangen', 'success');
@@ -2774,8 +2991,6 @@
             const siteId = state.netlifyConfig.siteId;
 
             try {
-                $('btn-download-netlify').disabled = true;
-
                 let dirHandle = null;
                 if (state.backend !== 'http') {
                     dirHandle = await idb.load();
@@ -2911,8 +3126,6 @@
             const mergeKey = 'cf-pull';
 
             try {
-                $('btn-download-netlify').disabled = true;
-
                 let dirHandle = null;
                 if (state.backend !== 'http') {
                     dirHandle = await idb.load();
@@ -2929,18 +3142,15 @@
                     }
                 }
 
-                showToast('Deployments ophalen…', 'info', { mergeKey });
-                const rawList = await cfApiResult(
-                    `/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}/deployments?per_page=25`
+                showToast('Productieversie ophalen…', 'info', { mergeKey });
+                const project = await cfApiResult(
+                    `/client/v4/accounts/${encodeURIComponent(accountId)}/pages/projects/${encodeURIComponent(projectName)}`
                 );
-                const arr = Array.isArray(rawList) ? rawList : [];
-                const latest = arr
-                    .filter((d) => d && d.url)
-                    .sort((a, b) => new Date(b.created_on || 0) - new Date(a.created_on || 0))[0];
-                if (!latest || !latest.url) {
-                    throw new Error('Geen deployment-URL gevonden. Publiceer minstens een keer vanuit dit project.');
+                const production = project?.canonical_deployment || project?.latest_deployment;
+                if (!production?.url) {
+                    throw new Error('Geen productie-deployment gevonden. Publiceer minstens een keer vanuit dit project.');
                 }
-                const origin = latest.url.replace(/\/$/, '');
+                const origin = production.url.replace(/\/$/, '');
 
                 showToast('index.html downloaden…', 'info', { mergeKey });
                 const htmlResponse = await fetch(`${origin}/index.html`);
@@ -3024,19 +3234,15 @@
             }
             const p = normalizeDeployProvider(state.deployProvider);
             let deployReady = false;
-            let canDownload = false;
             if (p === 'cloudflare') {
                 const c = state.cloudflareConfig || {};
                 const ok = !!(c.apiToken && c.accountId && c.projectName);
                 deployReady = hasProject && ok;
-                canDownload = ok;
             } else {
                 deployReady = hasProject && state.netlifyConfig?.token;
-                canDownload = state.netlifyConfig?.token && state.netlifyConfig?.siteId;
             }
 
             $('btn-deploy-netlify').disabled = !deployReady;
-            $('btn-download-netlify').disabled = !canDownload;
         }
 
         // ============================================
@@ -3058,7 +3264,6 @@
         });
         $('btn-select-folder').addEventListener('click', selectProjectFolder);
         $('btn-deploy-netlify').addEventListener('click', runDeploy);
-        $('btn-download-netlify').addEventListener('click', runDownload);
         $('btn-stop-server').addEventListener('click', async () => {
             try {
                 await fetch('/api/shutdown', { method: 'POST' });
@@ -3084,8 +3289,13 @@
         });
         $('link-save').addEventListener('click', () => {
             if (state.ui.currentLinkElement) {
-                state.ui.currentLinkElement.textContent = $('link-text').value;
-                state.ui.currentLinkElement.setAttribute('href', $('link-url').value || '#');
+                const link = state.ui.currentLinkElement;
+                const doc = $('preview-frame').contentDocument;
+                setNavLinkLabel(link, $('link-text').value);
+                link.setAttribute('href', $('link-url').value || '#');
+                if (isDesktopHeaderNavLink(link)) {
+                    syncResponsiveNavigation(doc);
+                }
                 showToast('Link bijgewerkt', 'success');
             }
             closeModal('link-modal');
@@ -3162,6 +3372,16 @@
         window.updateProviderStatus = updateProviderStatus;
         window.syncProviderPanels = syncProviderPanels;
         window.updateDeployButtons = updateDeployButtons;
+        window.parseSrcsetWidths = parseSrcsetWidths;
+        window.getRequiredWidthsForImage = getRequiredWidthsForImage;
+        window.collectImageAssetFilenames = collectImageAssetFilenames;
+        window.validateImageUpload = validateImageUpload;
+        window.applyImageReplacement = applyImageReplacement;
+        window.generateWebPVariantsFromBitmap = generateWebPVariantsFromBitmap;
+        window.syncResponsiveNavigation = syncResponsiveNavigation;
+        window.isDesktopHeaderNavLink = isDesktopHeaderNavLink;
+        window.navLinkLabel = navLinkLabel;
+        window.setNavLinkLabel = setNavLinkLabel;
     </script>
 </body>
 </html>
