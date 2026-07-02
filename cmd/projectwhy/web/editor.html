@@ -1259,6 +1259,11 @@
             
             // Remove any floating toolbars
             clone.querySelectorAll('.cms-section-toolbar, .cms-toggle-toolbar, .cms-format-toolbar').forEach(el => el.remove());
+
+            // Normalize user-edited text so pasted fonts or block wrappers cannot leak into the site.
+            clone.querySelectorAll('[data-editable]').forEach(el => {
+                normalizeEditableContent(el);
+            });
             
             // Handle toggleable elements - add display:none for hidden ones
             clone.querySelectorAll('[data-toggleable]').forEach(el => {
@@ -1538,6 +1543,7 @@
             // Setup text editing
             doc.querySelectorAll('[data-editable]').forEach(el => {
                 el.setAttribute('contenteditable', 'true');
+                attachEditableTextGuards(el);
             });
             
             // Setup image replacement
@@ -1564,6 +1570,158 @@
             
             // Setup formatting toolbar for editable elements
             setupFormattingToolbar(doc);
+        }
+
+        function attachEditableTextGuards(el) {
+            if (el.__cmsTextGuardsAttached) return;
+            el.__cmsTextGuardsAttached = true;
+
+            el.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+                e.preventDefault();
+                insertLineBreakAtSelection(el.ownerDocument);
+            });
+
+            el.addEventListener('paste', (e) => {
+                const text = e.clipboardData?.getData('text/plain');
+                if (text === undefined) return;
+                e.preventDefault();
+                if (isVisiblyEmptyEditable(el)) {
+                    el.innerHTML = '';
+                    placeCaretAtEnd(el);
+                }
+                insertHtmlAtSelection(el.ownerDocument, plainTextToEditableHtml(text));
+            });
+        }
+
+        function isVisiblyEmptyEditable(el) {
+            return (el.textContent || '') === '' && Array.from(el.childNodes).every(node => {
+                return node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() === 'br');
+            });
+        }
+
+        function placeCaretAtEnd(el) {
+            const doc = el.ownerDocument;
+            const selection = doc.getSelection();
+            if (!selection) return;
+
+            const range = doc.createRange();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        function insertHtmlAtSelection(doc, html) {
+            const selection = doc.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+
+            const template = doc.createElement('template');
+            template.innerHTML = html;
+            const fragment = template.content;
+            const lastNode = fragment.lastChild;
+            range.insertNode(fragment);
+
+            if (lastNode) {
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        }
+
+        function insertLineBreakAtSelection(doc) {
+            if (doc.queryCommandSupported?.('insertLineBreak')) {
+                doc.execCommand('insertLineBreak', false, null);
+                return;
+            }
+            insertHtmlAtSelection(doc, '<br>');
+        }
+
+        function plainTextToEditableHtml(text) {
+            return text
+                .replace(/\r\n?/g, '\n')
+                .split('\n')
+                .map(escapeHtml)
+                .join('<br>');
+        }
+
+        function normalizeEditableContent(el) {
+            const parts = [];
+            Array.from(el.childNodes).forEach(node => collectEditableHtml(node, parts));
+            const html = parts.join('');
+            el.innerHTML = hasOnlyBreaks(html) ? '<br>' : trimTrailingBreaks(html);
+        }
+
+        function collectEditableHtml(node, parts) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                parts.push(escapeHtml(node.nodeValue || ''));
+                return;
+            }
+
+            if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+            const tag = node.tagName.toLowerCase();
+            if (tag === 'br') {
+                appendBreak(parts);
+                return;
+            }
+
+            const isBlock = isBlockEditableTag(tag);
+            if (isBlock && parts.length > 0) appendBreak(parts);
+
+            if (tag === 'a') {
+                const href = node.getAttribute('href') || '#';
+                parts.push(`<a href="${escapeAttribute(href)}">`);
+                Array.from(node.childNodes).forEach(child => collectEditableHtml(child, parts));
+                parts.push('</a>');
+            } else if (['b', 'strong', 'i', 'em'].includes(tag)) {
+                parts.push(`<${tag}>`);
+                Array.from(node.childNodes).forEach(child => collectEditableHtml(child, parts));
+                parts.push(`</${tag}>`);
+            } else {
+                Array.from(node.childNodes).forEach(child => collectEditableHtml(child, parts));
+            }
+
+            if (isBlock) appendBreak(parts);
+        }
+
+        function isBlockEditableTag(tag) {
+            return [
+                'address', 'article', 'aside', 'blockquote', 'dd', 'div', 'dl', 'dt',
+                'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2', 'h3',
+                'h4', 'h5', 'h6', 'header', 'hr', 'li', 'main', 'nav', 'ol', 'p',
+                'pre', 'section', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead',
+                'tr', 'ul'
+            ].includes(tag);
+        }
+
+        function appendBreak(parts) {
+            if (parts[parts.length - 1] !== '<br>') {
+                parts.push('<br>');
+            }
+        }
+
+        function trimTrailingBreaks(html) {
+            return html.replace(/(?:<br>)+$/g, '');
+        }
+
+        function hasOnlyBreaks(html) {
+            return /^(?:<br>)+$/.test(html);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;');
+        }
+
+        function escapeAttribute(value) {
+            return escapeHtml(value).replaceAll('"', '&quot;');
         }
         
         function setupFormattingToolbar(doc) {

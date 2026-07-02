@@ -111,6 +111,73 @@ test.describe('Text Editing (data-editable)', () => {
     await expect(para).toHaveText('New paragraph');
   });
 
+  test('enter in editable text should insert line breaks without block wrappers', async ({ page }) => {
+    const description = preview.getEditableText('#main-description');
+
+    await description.fill('Line one');
+    await description.evaluate(el => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Line two');
+
+    const html = await description.evaluate(el => el.innerHTML);
+    expect(html).toBe('Line one<br>Line two');
+    expect(html).not.toContain('<div');
+    expect(html).not.toContain('<p');
+  });
+
+  test('paste in editable text should insert plain text with safe line breaks', async () => {
+    const description = preview.getEditableText('#main-description');
+
+    await description.fill('');
+    await description.evaluate(el => {
+      const data = new DataTransfer();
+      data.setData('text/plain', 'First line\nSecond line');
+      data.setData('text/html', '<span style="font-size: 48px">First line</span><div>Second line</div>');
+      const event = new ClipboardEvent('paste', {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      });
+      el.dispatchEvent(event);
+    });
+
+    const html = await description.evaluate(el => el.innerHTML);
+    expect(html).toBe('First line<br>Second line');
+    expect(html).not.toContain('font-size');
+    expect(html).not.toContain('<div');
+  });
+
+  test('exported editable HTML should strip unsafe formatting but keep bold links and breaks', async () => {
+    await editor.injectTestContent(`
+      <!DOCTYPE html>
+      <html><head><title>Dirty Editable Test</title></head>
+      <body>
+        <div data-editable id="dirty">
+          <span style="font-size: 48px; color: red;">Big text</span>
+          <div>Second line</div>
+          <strong>Bold text</strong>
+          <a href="https://example.com" style="font-size: 72px;">Link text</a>
+        </div>
+      </body>
+      </html>
+    `);
+
+    const content = await editor.getEditedContent();
+    expect(content).toContain('<div data-editable="" id="dirty">');
+    expect(content).toContain('Big text<br>Second line<br><strong>Bold text</strong>');
+    expect(content).toContain('<a href="https://example.com">Link text</a>');
+    expect(content).not.toContain('font-size');
+    expect(content).not.toContain('style="');
+    expect(content).not.toContain('<span');
+  });
+
   test('minimal template should have working editables', async () => {
     // Test with minimal template
     await editor.injectTestContent(MINIMAL_TEMPLATE);

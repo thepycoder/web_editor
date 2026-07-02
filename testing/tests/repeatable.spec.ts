@@ -149,6 +149,31 @@ test.describe('Repeatable Sections (data-repeatable)', () => {
     await expect(clonedTitle).toHaveText('Modified Clone Title');
   });
 
+  test('duplicated sections should preserve safe editable line breaks', async ({ page }) => {
+    const container = preview.getRepeatable('#cards-container');
+    const firstCard = container.locator('> .card').first();
+
+    await firstCard.hover();
+    await preview.getDuplicateButton(firstCard).click();
+
+    const clonedDescription = container.locator('> .card').nth(1).locator('p[data-editable]');
+    await clonedDescription.fill('Line one');
+    await clonedDescription.evaluate(el => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Line two');
+
+    const html = await clonedDescription.evaluate(el => el.innerHTML);
+    expect(html).toBe('Line one<br>Line two');
+    expect(html).not.toContain('<div');
+  });
+
   test('duplicated sections should have working duplicate/delete buttons', async () => {
     const container = preview.getRepeatable('#cards-container');
     
