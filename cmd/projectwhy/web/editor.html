@@ -969,6 +969,17 @@
          * Loads index.html + assets from the local project folder (after optional host sync).
          * @param {{ skipOpenedToast?: boolean }} [options]
          */
+        /** Rebuild a Blob with MIME derived from the filename (Windows File.type is often empty for .svg). */
+        async function typedAssetBlob(source, name) {
+            const type = guessMimeType(name) || 'application/octet-stream';
+            const buf = source instanceof ArrayBuffer ? source : await source.arrayBuffer();
+            return new Blob([buf], { type });
+        }
+
+        async function blobFromAssetResponse(res, name) {
+            return typedAssetBlob(await res.arrayBuffer(), name);
+        }
+
         async function loadHttpProjectContent(options = {}) {
             const skipOpenedToast = !!options.skipOpenedToast;
             const idxRes = await fetch('/api/project/index.html');
@@ -1012,7 +1023,7 @@
             for (const name of names) {
                 const bRes = await fetch('/api/project/assets/' + encodeURIComponent(name));
                 if (bRes.ok) {
-                    const blob = await bRes.blob();
+                    const blob = await blobFromAssetResponse(bRes, name);
                     state.assetBlobUrls.set(name, URL.createObjectURL(blob));
                 }
             }
@@ -1317,7 +1328,8 @@
                 for await (const entry of assetsHandle.values()) {
                     if (entry.kind === 'file') {
                         const file = await entry.getFile();
-                        const blobUrl = URL.createObjectURL(file);
+                        const blob = await typedAssetBlob(file, entry.name);
+                        const blobUrl = URL.createObjectURL(blob);
                         state.assetBlobUrls.set(entry.name, blobUrl);
                     }
                 }
@@ -3060,7 +3072,8 @@
                         try {
                             const response = await fetch(`${filesOrigin}${file.path}`);
                             if (response.ok) {
-                                assetBlobs.set('.' + file.path, await response.blob());
+                                const name = file.path.replace(/^\/assets\//, '');
+                                assetBlobs.set('.' + file.path, await typedAssetBlob(response, name));
                             }
                         } catch (err) {
                             console.warn(`Failed to download asset: ${file.path}`, err);
@@ -3171,7 +3184,7 @@
                     try {
                         const response = await fetch(`${origin}/assets/${encodeURIComponent(name)}`);
                         if (response.ok) {
-                            assetBlobs.set('./assets/' + name, await response.blob());
+                            assetBlobs.set('./assets/' + name, await typedAssetBlob(response, name));
                         }
                     } catch (err) {
                         console.warn('Failed to download asset:', name, err);

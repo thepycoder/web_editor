@@ -49,22 +49,38 @@ var bakedCfProjectName string
 // Default deploy UI/API selection: bake-build, -ldflags -X main.bakedDeployProvider=..., or PROJECTWHY_DEFAULT_DEPLOY_PROVIDER.
 var bakedDeployProvider string
 
+// Optional home-subdir name for the default project folder (bake-build PROJECTWHY_PROJECT_FOLDER).
+var bakedProjectFolder string
+
+func projectFolderName() string {
+	if f := strings.TrimSpace(bakedProjectFolder); f != "" {
+		if clean := filepath.Base(f); clean == f && clean != "." && clean != ".." {
+			return clean
+		}
+	}
+	return "ProjectWhyWebsite"
+}
+
 func defaultProjectDir() string {
+	folder := projectFolderName()
 	if runtime.GOOS == "windows" {
 		if u := os.Getenv("USERPROFILE"); u != "" {
-			return filepath.Join(u, "ProjectWhyWebsite")
+			return filepath.Join(u, folder)
 		}
 	}
 	h, err := os.UserHomeDir()
 	if err != nil {
-		return filepath.Join(".", "ProjectWhyWebsite")
+		return filepath.Join(".", folder)
 	}
-	return filepath.Join(h, "ProjectWhyWebsite")
+	return filepath.Join(h, folder)
 }
 
-// loadDotenv loads the first existing .env among: next to the binary, cwd, then project root.
-// Project root matters when the binary is on PATH or run from a cwd that has no .env, while
-// PROJECTWHY_DIR or -project points at a folder that contains .env (e.g. ~/ProjectWhyWebsite/.env).
+// loadDotenv loads deploy defaults from dotenv files.
+// Order (first existing file wins for empty keys via LoadFile):
+//  1. project root .env (site-specific when using -project)
+//  2. cwd .env
+//  3. next to the binary
+// Use -env to force a specific file (overrides these).
 func loadDotenv(projectRoot string) {
 	exe, err := os.Executable()
 	exeDir := ""
@@ -75,14 +91,30 @@ func loadDotenv(projectRoot string) {
 	if err != nil {
 		wd = ""
 	}
-	paths := []string{
-		filepath.Join(exeDir, ".env"),
-		filepath.Join(wd, ".env"),
-	}
+	var paths []string
 	if projectRoot != "" {
 		paths = append(paths, filepath.Join(projectRoot, ".env"))
 	}
+	paths = append(paths,
+		filepath.Join(wd, ".env"),
+		filepath.Join(exeDir, ".env"),
+	)
 	envload.TryLoadFirst(paths...)
+}
+
+func loadEnvFile(path string) {
+	if path == "" {
+		return
+	}
+	if !filepath.IsAbs(path) {
+		if wd, err := os.Getwd(); err == nil {
+			path = filepath.Join(wd, path)
+		}
+	}
+	if err := envload.LoadFileOverride(path); err != nil {
+		log.Fatalf("env file %s: %v", path, err)
+	}
+	fmt.Println("Loaded env from", path)
 }
 
 func resolvedNetlifyDefaults() httpserver.NetlifyDefaults {
@@ -189,11 +221,23 @@ func tryShutdownExisting(addr string) {
 
 func main() {
 	listen := flag.String("listen", "127.0.0.1:4070", "HTTP listen address")
-	projectDir := flag.String("project", "", "Project root (default: PROJECTWHY_DIR or home/ProjectWhyWebsite)")
+	projectDir := flag.String("project", "", "Project root (default: PROJECTWHY_DIR or home/<baked or ProjectWhyWebsite>)")
+	envFile := flag.String("env", "", "Dotenv path with deploy defaults (e.g. sites/janasey.env); overrides cwd/.env")
 	noBrowser := flag.Bool("no-browser", false, "Do not open a browser tab")
 	flag.Parse()
 
-	loadDotenv(resolveProjectDir(*projectDir))
+	if *envFile != "" {
+		loadEnvFile(*envFile)
+	} else {
+		tentative := *projectDir
+		if tentative == "" {
+			tentative = os.Getenv("PROJECTWHY_DIR")
+		}
+		if tentative == "" {
+			tentative = defaultProjectDir()
+		}
+		loadDotenv(tentative)
+	}
 
 	rootPath := resolveProjectDir(*projectDir)
 	pr, err := project.NewRoot(rootPath)
@@ -205,10 +249,15 @@ func main() {
 
 	tryShutdownExisting(*listen)
 
+	skipHostSync := *projectDir != "" && *envFile == ""
 	go func() {
 		host := *listen
 		openURL := "http://" + host + "/editor.html"
 		openURL = strings.Replace(openURL, "//0.0.0.0:", "//127.0.0.1:", 1)
+		// Avoid wiping a -project folder with whatever host cwd/.env points at.
+		if skipHostSync {
+			openURL += "?debug"
+		}
 		time.Sleep(150 * time.Millisecond)
 		if !*noBrowser {
 			openBrowser(openURL)
@@ -217,6 +266,13 @@ func main() {
 
 	fmt.Printf("ProjectWhy %s — http://%s — close this window or press Ctrl+C to stop.\n", version, *listen)
 	fmt.Printf("Project folder: %s\n", pr.Dir())
+	cf := resolvedCloudflareDefaults()
+	if cf.ProjectName != "" {
+		fmt.Printf("Cloudflare Pages project: %s\n", cf.ProjectName)
+	}
+	if skipHostSync {
+		fmt.Println("Note: opened with ?debug (no -env). Host sync skipped. Use -env sites/<client>.env to sync/publish that site.")
+	}
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)

@@ -6,34 +6,39 @@ A dead-simple, single file html editor and deployment tool for single page, stat
 
 Because deploying a single page, static website for a bakery or flower shop, does not need to be made by Wordpress.
 
-## Quick start: build for Windows (Cloudflare Pages, no console)
+## Multi-site model
 
-The default target is a single `.exe` for Windows that runs as a GUI app (no terminal window), with Cloudflare Pages credentials baked in.
+One **Windows binary per client**. Deploy credentials and the default project folder name are baked from a per-site env file under [`sites/`](sites/). Site HTML is **not** in the binary — it lives in the project folder on disk and syncs with Cloudflare Pages.
 
-**Prerequisites:** [Go](https://go.dev/dl/) on your build machine. Users only need the built `.exe`.
+| Client | Env file | Baked project folder | Pages project |
+|--------|----------|----------------------|---------------|
+| De Rotonde | `sites/derotonde.env` | `~/ProjectWhyWebsite` | `derotonde` |
+| Janasey | `sites/janasey.env` | `~/JanaseyWebsite` | `janasey` |
 
-1. Create a `.env` file at the repo root:
+`templates/` is reference/source only and is not embedded in the build.
 
+## Quick start: build Windows binaries
+
+**Prerequisites:** [Go](https://go.dev/dl/) on your build machine. Clients only need the built `.exe`.
+
+1. Create per-site env files (gitignored) from the examples:
+  ```bash
+   cp sites/derotonde.env.example sites/derotonde.env
+   cp sites/janasey.env.example sites/janasey.env
+   # Fill PROJECTWHY_CF_API_TOKEN and PROJECTWHY_CF_ACCOUNT_ID in each file.
    ```
-   PROJECTWHY_CF_API_TOKEN=your-cloudflare-api-token
-   PROJECTWHY_CF_ACCOUNT_ID=your-account-id
-   PROJECTWHY_CF_PROJECT_NAME=your-pages-project-name
-   ```
+   The API token needs *Account · Cloudflare Pages · Edit*. Use a **Direct Upload** Pages project per site.
 
-   The API token needs *Account · Cloudflare Pages · Edit*. Use a **Direct Upload** Pages project.
+   Optional keys:
+   - `PROJECTWHY_CF_PROJECT_NAME` — Cloudflare Pages project name
+   - `PROJECTWHY_PROJECT_FOLDER` — single folder name under the user home (default project dir when `-project` / `PROJECTWHY_DIR` are unset)
+   - `PROJECTWHY_DEFAULT_DEPLOY_PROVIDER` — `cloudflare` or `netlify`
 
 2. Build:
-
-   ```bash
-   go run ./cmd/bake-build -goos windows -goarch amd64 -ldflags "-H windowsgui"
-   ```
-
-   Output: `dist/projectwhy_<version>.exe`
-
-   Or using make:
-
-   ```bash
-   make build-windows
+  ```bash
+   make build-windows-derotonde   # → dist/projectwhy_derotonde.exe
+   make build-windows-janasey     # → dist/projectwhy_janasey.exe
+   # Or: make build-windows CLIENT=derotonde
    ```
 
 Unsigned builds may trigger **Windows SmartScreen** ("Windows protected your PC"): choose *More info* → *Run anyway*, or sign the binary for enterprise rollout.
@@ -42,34 +47,48 @@ Unsigned builds may trigger **Windows SmartScreen** ("Windows protected your PC"
 
 ## Local development
 
-Run the editor locally:
+Always pass **both** `-project` (site files) and `-env` (deploy target) for the client you’re editing. Otherwise a repo-root `.env` for another site can sync the wrong live website into your folder.
 
 ```bash
-go run ./cmd/projectwhy -listen 127.0.0.1:4070
+# De Rotonde
+go run ./cmd/projectwhy \
+  -project /home/victor/ProjectWhyWebsite \
+  -env sites/derotonde.env
+
+# Janasey (use ?debug until the Pages project has content you want to pull)
+go run ./cmd/projectwhy \
+  -project /home/victor/Projects/janasey \
+  -env sites/janasey.env
+# First-time / local HTML work without overwriting from host:
+# open http://127.0.0.1:4070/editor.html?debug
 ```
 
-Append `?debug` to the URL (`http://127.0.0.1:4070/editor.html?debug`) to skip the automatic download of the live website on startup — useful when you have local template changes you don't want overwritten.
+If you pass `-project` without `-env`, the browser opens with `?debug` so a mismatched cwd `.env` cannot wipe the folder.
 
-**Editing the editor UI:** edit [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html), then `go build` (the file is embedded at compile time).
+Append `?debug` yourself anytime to skip the automatic download of the live website.
+
+**Editing the editor UI:** edit [cmd/projectwhy/web/editor.html](cmd/projectwhy/web/editor.html), then rebuild (the file is embedded at compile time).
 
 Flags:
 
 - `-listen` — bind address (default `127.0.0.1:4070`)
-- `-project` — project root; overrides `PROJECTWHY_DIR`
-- `PROJECTWHY_DIR` — project root when `-project` is not set (default: `%USERPROFILE%\ProjectWhyWebsite` on Windows, `~/ProjectWhyWebsite` elsewhere)
+- `-project` — project root; overrides `PROJECTWHY_DIR` and the baked folder
+- `-env` — dotenv with Cloudflare/Netlify defaults for this client (e.g. `sites/janasey.env`)
+- `PROJECTWHY_DIR` — project root when `-project` is not set
+- Default without either: `~/` + baked `PROJECTWHY_PROJECT_FOLDER`, or `~/ProjectWhyWebsite` if nothing was baked
 - `-no-browser` — do not open a browser tab
 
 ## Staging
 
-``` go run ./cmd/projectwhy -project ~/ProjectWhyWebsite-staging -listen 127.0.0.1:4070```
-
-This runs the whole tool on a staging website, so one can test properly.
+```bash
+go run ./cmd/projectwhy -project ~/ProjectWhyWebsite-staging -listen 127.0.0.1:4071
+```
 
 ## Versioning
 
 The semver lives in [internal/version/version.go](internal/version/version.go) and is shown in the editor status bar.
 
-- **`bake-build`** reads the version from source and bakes it into the binary automatically.
+- **bake-build** reads the version from source and bakes it into the binary automatically.
 - **Plain `go build`** uses the same source default; override with `-ldflags "-X main.version=…"`.
 
 To bump, edit `internal/version/version.go`.
@@ -77,6 +96,9 @@ To bump, edit `internal/version/version.go`.
 ## Makefile
 
 ```
-make build          # bake-build for the host platform
-make build-windows  # cross-compile Windows amd64 GUI .exe with Cloudflare baked in
+make build                         # host binary for CLIENT (default derotonde)
+make build CLIENT=janasey          # host binary for janasey
+make build-windows                 # Windows exe for CLIENT (default derotonde)
+make build-windows-derotonde       # dist/projectwhy_derotonde.exe
+make build-windows-janasey         # dist/projectwhy_janasey.exe
 ```

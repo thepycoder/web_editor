@@ -11,6 +11,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -264,7 +265,7 @@ func (s *Server) handleListAssets(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(names)
 }
 
-// asset name from "/api/project/assets/foo.png"
+// assetNameFromSuffix extracts a sanitized asset filename from "/api/project/assets/foo.png".
 func assetNameFromSuffix(path string) (string, error) {
 	const prefix = "/api/project/assets/"
 	if !strings.HasPrefix(path, prefix) {
@@ -275,6 +276,25 @@ func assetNameFromSuffix(path string) (string, error) {
 		return "", project.ErrInvalidAssetName
 	}
 	return project.SanitizeAssetName(name)
+}
+
+func contentTypeForAsset(name string) string {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".svg":
+		return "image/svg+xml"
+	case ".png":
+		return "image/png"
+	case ".jpg", ".jpeg":
+		return "image/jpeg"
+	case ".webp":
+		return "image/webp"
+	case ".gif":
+		return "image/gif"
+	case ".ico":
+		return "image/x-icon"
+	default:
+		return "application/octet-stream"
+	}
 }
 
 func (s *Server) handleAssetPath(w http.ResponseWriter, r *http.Request) {
@@ -299,7 +319,7 @@ func (s *Server) handleAssetPath(w http.ResponseWriter, r *http.Request) {
 		if size > 0 {
 			w.Header().Set("Content-Length", strconv.FormatInt(size, 10))
 		}
-		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Type", contentTypeForAsset(name))
 		_, _ = io.Copy(w, rc)
 	case http.MethodPut:
 		defer r.Body.Close()

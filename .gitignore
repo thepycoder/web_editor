@@ -1,4 +1,6 @@
 /target
 .env
+sites/*.env
+!sites/*.env.example
 cmd/projectwhy/z_baked_env.gen.go
 dist/

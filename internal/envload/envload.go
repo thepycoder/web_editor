@@ -54,6 +54,18 @@ func LoadFile(path string) error {
 	return nil
 }
 
+// LoadFileOverride parses a dotenv file and always sets the variables (overwrites existing).
+func LoadFileOverride(path string) error {
+	m, err := ParseFile(path)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		_ = os.Setenv(k, v)
+	}
+	return nil
+}
+
 // TryLoadFirst calls LoadFile on the first path that exists and is a regular file.
 func TryLoadFirst(paths ...string) {
 	for _, p := range paths {

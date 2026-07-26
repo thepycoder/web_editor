@@ -1,6 +1,7 @@
-// Bake-build reads .env from the module root, generates a short-lived Go file that sets
-// bakedNetlifyToken / bakedNetlifySiteID, optional Cloudflare baked vars, and optional
-// bakedDeployProvider (from PROJECTWHY_DEFAULT_DEPLOY_PROVIDER) in init(),
+// Bake-build reads a per-site .env, generates a short-lived Go file that sets
+// bakedNetlifyToken / bakedNetlifySiteID, optional Cloudflare baked vars,
+// bakedDeployProvider (from PROJECTWHY_DEFAULT_DEPLOY_PROVIDER), and optional
+// bakedProjectFolder (from PROJECTWHY_PROJECT_FOLDER) in init(),
 // runs go build, then deletes the generated file (unless -keep). Use this instead of hand-written -ldflags -X.
 package main
 
@@ -45,7 +46,7 @@ func findModuleRoot() (string, error) {
 	}
 }
 
-func writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider string) (string, error) {
+func writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider, projectFolder string) (string, error) {
 	path := filepath.Join(root, "cmd/projectwhy", genFileName)
 	var b strings.Builder
 	b.WriteString(genPreamble)
@@ -55,6 +56,7 @@ func writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider string)
 	fmt.Fprintf(&b, "\tbakedCfAccountID = %s\n", strconv.Quote(cfAcct))
 	fmt.Fprintf(&b, "\tbakedCfProjectName = %s\n", strconv.Quote(cfProj))
 	fmt.Fprintf(&b, "\tbakedDeployProvider = %s\n", strconv.Quote(deployProvider))
+	fmt.Fprintf(&b, "\tbakedProjectFolder = %s\n", strconv.Quote(projectFolder))
 	b.WriteString("}\n")
 	err := os.WriteFile(path, []byte(b.String()), 0o600)
 	return path, err
@@ -105,7 +107,7 @@ func main() {
 		envAbs = filepath.Join(root, envAbs)
 	}
 
-	var token, siteID, cfTok, cfAcct, cfProj, deployProvider string
+	var token, siteID, cfTok, cfAcct, cfProj, deployProvider, projectFolder string
 	m, err := envload.ParseFile(envAbs)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -120,11 +122,17 @@ func main() {
 		cfAcct = strings.TrimSpace(m["PROJECTWHY_CF_ACCOUNT_ID"])
 		cfProj = strings.TrimSpace(m["PROJECTWHY_CF_PROJECT_NAME"])
 		deployProvider = strings.TrimSpace(m["PROJECTWHY_DEFAULT_DEPLOY_PROVIDER"])
+		projectFolder = strings.TrimSpace(m["PROJECTWHY_PROJECT_FOLDER"])
+		if projectFolder != "" {
+			if clean := filepath.Base(projectFolder); clean != projectFolder || clean == "." || clean == ".." {
+				log.Fatalf("PROJECTWHY_PROJECT_FOLDER must be a single folder name under the user home (got %q)", projectFolder)
+			}
+		}
 	}
 
-	baked := token != "" || siteID != "" || cfTok != "" || cfAcct != "" || cfProj != "" || deployProvider != ""
+	baked := token != "" || siteID != "" || cfTok != "" || cfAcct != "" || cfProj != "" || deployProvider != "" || projectFolder != ""
 	if baked {
-		if _, err := writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider); err != nil {
+		if _, err := writeGen(root, token, siteID, cfTok, cfAcct, cfProj, deployProvider, projectFolder); err != nil {
 			log.Fatal(err)
 		}
 		fmt.Println("bake-build: baked deploy defaults from", envAbs)
